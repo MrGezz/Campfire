@@ -15,9 +15,11 @@
 !Frostfall_BuildRelease.py
 !CampDevKit_BuildRelease.py
 !FrostDevKit_BuildRelease.py
+!buildcommon.py
 !Archive.exe
 !CampfireArchiveBuilder.txt
 !CampfireArchiveManifest.txt
+!CampfireArchiveManifestExternal.txt
 !FrostfallArchiveBuilder.txt
 !FrostfallArchiveManifest.txt
 !CampDevKitArchiveManifest.txt
@@ -124,6 +126,7 @@
 
 #PapyrusUtil files
 !StorageUtil.dll
+!PapyrusUtil.dll
 !StorageUtil.pex
 !StorageUtil.psc
 !JsonUtil.pex

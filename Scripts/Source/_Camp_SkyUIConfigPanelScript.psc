@@ -406,7 +406,10 @@ function PageReset_SaveLoad()
 			if !skyui
 				skyui = Game.GetFormFromFile(0x00000814, "SkyUI_SE.esp") as SKI_Main
 			endif
-			int version = skyui.ReqSWFRelease
+			int version = 0
+			if skyui
+				version = skyui.ReqSWFRelease
+			endif
 			if version >= 1026 	; SkyUI 5.1+
 				SaveLoad_RenameProfile_OID = AddInputOption("", "$CampfireSaveLoadRenameProfile")
 			else

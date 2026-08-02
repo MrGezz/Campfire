@@ -1,0 +1,7 @@
+# Files sourced from external/<game>/ rather than the project directory, so that the
+# correct build of PapyrusUtil ships with each runtime. These overwrite the copies of
+# the same name that CampfireArchiveManifest.txt takes from the project directory.
+Scripts\JsonUtil.pex
+Scripts\StorageUtil.pex
+Scripts\Source\JsonUtil.psc
+Scripts\Source\StorageUtil.psc

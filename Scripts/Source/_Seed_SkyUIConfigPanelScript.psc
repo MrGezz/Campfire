@@ -252,7 +252,13 @@ function PageReset_SaveLoad()
 	AddEmptyOption()
 	if _Seed_Setting_AutoSaveLoad.GetValueInt() == 2
 		SKI_Main skyui = Game.GetFormFromFile(0x00000814, "SkyUI.esp") as SKI_Main
-		int version = skyui.ReqSWFRelease
+		if !skyui
+			skyui = Game.GetFormFromFile(0x00000814, "SkyUI_SE.esp") as SKI_Main
+		endif
+		int version = 0
+		if skyui
+			version = skyui.ReqSWFRelease
+		endif
 		if version >= 1026 	; SkyUI 5.1+
 			;@REENABLE
 			SaveLoad_RenameProfile_OID = AddInputOption("", "$LastSeedSaveLoadRenameProfile", OPTION_FLAG_DISABLED)

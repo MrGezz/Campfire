@@ -24,7 +24,7 @@ bool started_via_sleep = false
 bool isSKYUILoaded = false
 
 Event OnInit()
-	isSKYUILoaded = Game.GetFormFromFile(0x01000814, "SkyUI.esp")
+	isSKYUILoaded = Game.GetFormFromFile(0x01000814, "SkyUI.esp") || Game.GetFormFromFile(0x01000814, "SkyUI_SE.esp")
 	RegisterForSleep()
 	StartUp()
 endEvent

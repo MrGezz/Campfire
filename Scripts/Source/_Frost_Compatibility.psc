@@ -6,7 +6,14 @@ import FrostUtil
 import _FrostInternal
 import CommonArrayHelper
 
+; Minimum SKSE version required, by runtime. Encoded as (major * 10000) + (minor * 100) + build.
+int property SKSE_MIN_VERSION_LE = 10703 autoReadOnly	; SKSE 1.7.3, Skyrim Legendary Edition
+int property SKSE_MIN_VERSION_SE = 20020 autoReadOnly	; SKSE64 2.0.20, Skyrim Special Edition
+int property SKSE_MIN_VERSION_VR = 20012 autoReadOnly	; SKSEVR 2.0.12, Skyrim VR
+
 int property SKSE_MIN_VERSION = 10703 autoReadOnly
+{Deprecated as of Frostfall 3.5. The required SKSE version now depends on the runtime; use GetRequiredSKSEVersion().}
+
 int property CAMPFIRE_MIN_VERSION = 11200 autoReadOnly
 float property WEARABLELANTERNS_MIN_VERSION = 4.02 autoReadOnly
 GlobalVariable property _Frost_PreviousVersion auto
@@ -49,8 +56,10 @@ bool property isUIPackageInstalled hidden
 	endFunction	
 endProperty
 
+bool property isSkyrimVR auto hidden							; Skyrim VR
+bool property isSkyrimSE auto hidden						; Skyrim Special Edition
 bool property isSKYUILoaded auto hidden						; SkyUI 4.1+
-bool property isSKSELoaded auto hidden						; SKSE 1.7.3+
+bool property isSKSELoaded auto hidden						; SKSE 1.7.3+ / SKSE64 2.0.20+ / SKSEVR 2.0.12+
 bool property isLastSeedLoaded auto hidden					; Last Seed
 bool property isCOTLoaded auto hidden						; Climates of Tamriel
 bool property isIMALoaded auto hidden						; Immersive Armors 7.1
@@ -231,8 +240,13 @@ Event OnPlayerLoadGame()
 endEvent
 
 function ErrorSKSE(int version)
-	trace("[Frostfall][Warning] Detected SKSE version " + ((version as float) / 10000) + ". Expected " + ((SKSE_MIN_VERSION as float) / 10000) + " or newer. Using Fallback Mode.")
-	_Frost_CriticalError_SKSE.Show(((version as float) / 10000), ((SKSE_MIN_VERSION as float) / 10000))
+	int min_version = GetRequiredSKSEVersion()
+	if version
+		trace("[Frostfall][Warning] Detected " + GetSKSEName() + " version " + FormatSKSEVersion(version) + ". Expected " + FormatSKSEVersion(min_version) + " or newer. Using Fallback Mode.")
+	else
+		trace("[Frostfall][Warning] " + GetSKSEName() + " was not detected. Expected version " + FormatSKSEVersion(min_version) + " or newer. Using Fallback Mode.")
+	endif
+	_Frost_CriticalError_SKSE.Show(((version as float) / 10000), ((min_version as float) / 10000))
 endFunction
 
 function FatalErrorCampfire(float version)
@@ -273,21 +287,24 @@ function RunCompatibility()
 	trace("[Frostfall]           Errors related to missing files may follow. These are NORMAL and should be ignored.        ")
 	trace("[Frostfall]======================================================================================================")
 
-	if _Camp_IsSpecialEdition.GetValueInt() != 2
-		bool skse_loaded = SKSE.GetVersion()
-		if skse_loaded
-			int skse_version = (SKSE.GetVersion() * 10000) + (SKSE.GetVersionMinor() * 100) + SKSE.GetVersionBeta()
-			if skse_version < SKSE_MIN_VERSION
-				isSKSELoaded = false
-				ErrorSKSE(skse_version)
-			else
-				isSKSELoaded = true
-				trace("[Frostfall] Detected SKSE version " + ((skse_version as float) / 10000) + " (expected " + ((SKSE_MIN_VERSION as float) / 10000) + " or newer, success!)")
-			endif
-		else
+	; Identify the runtime before checking SKSE, so that the correct minimum version is applied.
+	int skse_major = SKSE.GetVersion()
+	DetectGameRuntime(skse_major)
+
+	int skse_min_version = GetRequiredSKSEVersion()
+	string skse_name = GetSKSEName()
+	if skse_major
+		int skse_version = (skse_major * 10000) + (SKSE.GetVersionMinor() * 100) + SKSE.GetVersionBeta()
+		if skse_version < skse_min_version
 			isSKSELoaded = false
-			ErrorSKSE(0)
+			ErrorSKSE(skse_version)
+		else
+			isSKSELoaded = true
+			trace("[Frostfall] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + " (expected " + FormatSKSEVersion(skse_min_version) + " or newer, success!)")
 		endif
+	else
+		isSKSELoaded = false
+		ErrorSKSE(0)
 	endif
 
 	VanillaGameLoadUp()
@@ -797,7 +814,7 @@ function Upgrade_3_3_1()
 			ap.SetArmorDataByKey("359400___Frostfall.esp", ap.GEARTYPE_CLOAK, 12, 40, abExportToDefaults = true, abSave = true) ; _Frost_Cloak_BoundGreater
 		endif
 
-		; Allow setting of custom armor data in Special Edition
+		; Allow setting of custom armor data when running in Fallback Mode (no SKSE).
 		if !isSKSELoaded
 			GetLegacyArmorDatastore().InitializeCustomArrays()
 		endif
@@ -979,24 +996,69 @@ function RunCompatibilityArmors_Vanilla()
 endFunction
 
 
+; Always resolved through GetFormFromFile. Game.GetModByName() returns 255 for light
+; (ESL-flagged) plugins on Special Edition, which reported any such plugin as missing.
 bool function IsPluginLoaded(int iFormID, string sPluginName)
-	if isSKSELoaded
-		int i = Game.GetModByName(sPluginName)
-		if i != 255
-			debug.trace("[Frostfall] Loaded: " + sPluginName)
-			return true
-		else
-			return false
-		endif
+	bool b = Game.GetFormFromFile(iFormID, sPluginName)
+	if b
+		debug.trace("[Frostfall] Loaded: " + sPluginName)
+		return true
 	else
-		bool b = Game.GetFormFromFile(iFormID, sPluginName)
-		if b
-			debug.trace("[Frostfall] Loaded: " + sPluginName)
-			return true
-		else
-			return false
-		endif
+		return false
 	endif
+endFunction
+
+; Identifies which Skyrim runtime we are running on.
+; SKSE 1.x is the 32-bit Legendary Edition build; SKSE64 and SKSEVR both report 2.x.
+; Skyrim VR is told apart from Special Edition by its own master file. When SKSE is
+; absent there is nothing to read the runtime from, so we fall back to the
+; _Camp_IsSpecialEdition global, which the Special Edition build of Campfire sets to 2.
+function DetectGameRuntime(int aiSKSEVersionMajor)
+	isSkyrimVR = IsPluginLoaded(0x00000BD7, "SkyrimVR.esm")
+	if aiSKSEVersionMajor >= 2
+		isSkyrimSE = !isSkyrimVR
+	elseif aiSKSEVersionMajor == 0 && _Camp_IsSpecialEdition
+		isSkyrimSE = !isSkyrimVR && _Camp_IsSpecialEdition.GetValueInt() == 2
+	else
+		isSkyrimSE = false
+	endif
+
+	if isSkyrimVR
+		trace("[Frostfall] Detected runtime: Skyrim VR.")
+	elseif isSkyrimSE
+		trace("[Frostfall] Detected runtime: Skyrim Special Edition.")
+	else
+		trace("[Frostfall] Detected runtime: Skyrim Legendary Edition.")
+	endif
+endFunction
+
+; The minimum SKSE version Frostfall supports on the current runtime.
+int function GetRequiredSKSEVersion()
+	if isSkyrimVR
+		return SKSE_MIN_VERSION_VR
+	elseif isSkyrimSE
+		return SKSE_MIN_VERSION_SE
+	endif
+	return SKSE_MIN_VERSION_LE
+endFunction
+
+; The name of the SKSE build expected on the current runtime, for logging.
+string function GetSKSEName()
+	if isSkyrimVR
+		return "SKSEVR"
+	elseif isSkyrimSE
+		return "SKSE64"
+	endif
+	return "SKSE"
+endFunction
+
+; Renders an encoded SKSE version as major.minor.build. Printing the encoded value as a
+; float renders SKSE64 2.0.20 as "2.002", which reads as older than SKSE 1.7.3.
+string function FormatSKSEVersion(int aiVersion)
+	int major = aiVersion / 10000
+	int minor = (aiVersion % 10000) / 100
+	int build = aiVersion % 100
+	return (major as string) + "." + (minor as string) + "." + (build as string)
 endFunction
 
 

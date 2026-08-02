@@ -1,0 +1,154 @@
+"""Shared helpers for the Skyrim Survival release builders.
+
+The builders live in the project directory and write their output next to it, e.g.
+
+    <parent>/Campfire/Campfire_BuildRelease.py   ->   <parent>/Campfire 1.13 Release/
+
+Paths in the manifest files are written Windows-style (``Scripts\\Source\\Foo.psc``)
+because that is what the Creation Kit's Archive.exe expects. They are normalised here
+so the builders also run on Linux and macOS.
+"""
+
+import os
+import shutil
+import sys
+
+# The directory holding the builder scripts, i.e. the project checkout.
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Releases are built alongside the checkout, not inside it.
+BUILD_ROOT = os.path.dirname(PROJECT_DIR)
+
+# Which external dependency set to ship, keyed by the answer to the game prompt.
+GAME_EXTERNALS = {
+    "LE": os.path.join(PROJECT_DIR, "external", "Skyrim"),
+    "SE": os.path.join(PROJECT_DIR, "external", "SkyrimSE"),
+}
+
+GAME_NAMES = {
+    "LE": "Skyrim Legendary Edition",
+    "SE": "Skyrim Special Edition",
+}
+
+# The SKSE plugin shipped with each runtime. PapyrusUtil is the 64-bit successor to
+# StorageUtil and uses a different file name.
+GAME_SKSE_PLUGIN = {
+    "LE": "StorageUtil.dll",
+    "SE": "PapyrusUtil.dll",
+}
+
+
+def fail(message):
+    """Abort the build with a readable message instead of a traceback."""
+    sys.stderr.write("\nERROR: " + message + "\n")
+    sys.exit(1)
+
+
+def prompt_version():
+    version = input("Enter the release version: ").strip()
+    if not version:
+        fail("No release version entered.")
+    return version
+
+
+def prompt_game():
+    """Ask which runtime to build for. Returns "LE" or "SE"."""
+    answer = input("(C)lassic Skyrim or Skyrim (SE)? ").strip().upper()
+    if answer in ("C", "LE", "CLASSIC"):
+        answer = "LE"
+    if answer not in GAME_EXTERNALS:
+        fail("Unknown game type '%s'. Please enter C or SE." % answer)
+    print("Generating %s build." % GAME_NAMES[answer])
+    return answer
+
+
+def project_path(*parts):
+    """A path inside the project checkout."""
+    return os.path.join(PROJECT_DIR, *parts)
+
+
+def externals_path(game, *parts):
+    """A path inside the external dependency set for the given runtime."""
+    return os.path.join(GAME_EXTERNALS[game], *parts)
+
+
+def normalize(manifest_line):
+    """Turn a Windows-style manifest path into one for the current platform."""
+    return manifest_line.rstrip("\n").rstrip("\r").strip().replace("\\", os.sep).replace("/", os.sep)
+
+
+def read_manifest(manifest_file):
+    """Read a manifest, skipping blank lines and # comments."""
+    if not os.path.isfile(manifest_file):
+        fail("Manifest not found: %s" % manifest_file)
+
+    entries = []
+    with open(manifest_file) as manifest:
+        for line in manifest:
+            entry = normalize(line)
+            if entry and not entry.startswith("#"):
+                entries.append(entry)
+    return entries
+
+
+def copy_file(source, destination):
+    """Copy a single file, creating the destination directory as needed."""
+    if not os.path.isfile(source):
+        fail("Required file is missing: %s" % source)
+
+    destination_dir = os.path.dirname(destination)
+    if destination_dir:
+        os.makedirs(destination_dir, exist_ok=True)
+    shutil.copyfile(source, destination)
+
+
+def copy_manifest(manifest_file, source_dir, destination_dir):
+    """Copy every file listed in a manifest from source_dir to destination_dir.
+
+    Every missing file is reported at once, rather than stopping at the first, so a
+    manifest that has drifted from the project directory can be fixed in one pass.
+    """
+    entries = read_manifest(manifest_file)
+    missing = [e for e in entries if not os.path.isfile(os.path.join(source_dir, e))]
+    if missing:
+        fail(
+            "%d file(s) listed in %s are missing from %s:\n    %s"
+            % (len(missing), os.path.basename(manifest_file), source_dir, "\n    ".join(missing))
+        )
+
+    for entry in entries:
+        copy_file(os.path.join(source_dir, entry), os.path.join(destination_dir, entry))
+
+
+def run_archiver(tempdir, builder_file, log_file):
+    """Run the Creation Kit's Archive.exe over a builder script to produce the BSA."""
+    import subprocess
+
+    archiver = os.path.join(tempdir, "Archive.exe")
+    try:
+        result = subprocess.call([archiver, "./" + builder_file], cwd=tempdir)
+    except OSError as error:
+        fail(
+            "Could not run %s: %s\nArchive.exe is a Windows executable; BSA generation "
+            "has to run on Windows (or under Wine)." % (archiver, error)
+        )
+
+    if result != 0:
+        fail("Archive.exe failed with exit code %d. See %s." % (result, log_file))
+
+
+def reset_directory(path):
+    """Create an empty directory, discarding anything already there."""
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    os.makedirs(path)
+    return path
+
+
+def make_release_zip(dirname, zip_basename):
+    """Zip up a finished release directory and drop the archive inside it."""
+    staged_zip = shutil.make_archive(os.path.join(BUILD_ROOT, zip_basename), "zip", root_dir=dirname)
+    final_zip = os.path.join(dirname, zip_basename + ".zip")
+    shutil.move(staged_zip, final_zip)
+    print("Created " + final_zip)
+    return final_zip

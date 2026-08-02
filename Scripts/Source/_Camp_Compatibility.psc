@@ -5,10 +5,19 @@ import CampUtil
 import _CampInternal
 import CommonArrayHelper
 
+; Minimum SKSE version required, by runtime. Encoded as (major * 10000) + (minor * 100) + build.
+int property SKSE_MIN_VERSION_LE = 10703 autoReadOnly	; SKSE 1.7.3, Skyrim Legendary Edition
+int property SKSE_MIN_VERSION_SE = 20020 autoReadOnly	; SKSE64 2.0.20, Skyrim Special Edition
+int property SKSE_MIN_VERSION_VR = 20012 autoReadOnly	; SKSEVR 2.0.12, Skyrim VR
+
 int property SKSE_MIN_VERSION = 10703 autoReadOnly
+{Deprecated as of Campfire 1.13. The required SKSE version now depends on the runtime; use GetRequiredSKSEVersion().}
+
 GlobalVariable property _Camp_PreviousVersion auto
 GlobalVariable property _Camp_CampfireVersion auto
 GlobalVariable property _Camp_IsBeta auto
+GlobalVariable property _Camp_IsSpecialEdition auto
+{Set to 2 by the Special Edition build. Only used to identify the runtime when SKSE is not installed.}
 
 ; #PROPERTIES=====================================================================================================================
 actor property PlayerRef auto
@@ -37,6 +46,7 @@ bool property isHFLoaded auto hidden						; Hearthfire
 
 ; #Supported Mods===============================================================
 bool property isSkyrimVR auto hidden						; Skyrim VR
+bool property isSkyrimSE auto hidden						; Skyrim Special Edition
 bool property isSKSELoaded auto hidden						; SKSE
 bool property isSKYUILoaded auto hidden						; SkyUI 3.4+
 bool property isFrostfallLoaded auto hidden					; Frostfall
@@ -242,19 +252,29 @@ function RunCompatibility()
 	; Update the previous version value with the current version
 	_Camp_PreviousVersion.SetValue(_Camp_CampfireVersion.GetValue())
 
-	bool skse_loaded = SKSE.GetVersion()
-	if skse_loaded
-		int skse_version = (SKSE.GetVersion() * 10000) + (SKSE.GetVersionMinor() * 100) + SKSE.GetVersionBeta()
-		if skse_version < SKSE_MIN_VERSION
-			_Camp_CriticalError_SKSE.Show(((skse_version as float) / 10000), ((SKSE_MIN_VERSION as float) / 10000))
+	; Identify the runtime before checking SKSE, so that the correct minimum version is applied.
+	int skse_major = SKSE.GetVersion()
+	DetectGameRuntime(skse_major)
+
+	int skse_min_version = GetRequiredSKSEVersion()
+	string skse_name = GetSKSEName()
+	if skse_major
+		int skse_version = (skse_major * 10000) + (SKSE.GetVersionMinor() * 100) + SKSE.GetVersionBeta()
+		if skse_version < skse_min_version
+			_Camp_CriticalError_SKSE.Show(((skse_version as float) / 10000), ((skse_min_version as float) / 10000))
 			isSKSELoaded = false
 			Conditions.IsSKSELoaded = false
-			trace("[Campfire][Warning] Detected SKSE version " + ((skse_version as float) / 10000) + ", out of date! Expected " + ((SKSE_MIN_VERSION as float) / 10000) + " or newer.")
+			trace("[Campfire][Warning] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + ", out of date! Expected " + FormatSKSEVersion(skse_min_version) + " or newer.")
 		else
 			isSKSELoaded = true
 			Conditions.IsSKSELoaded = true
-			trace("[Campfire] Detected SKSE version " + ((skse_version as float) / 10000) + " (expected " + ((SKSE_MIN_VERSION as float) / 10000) + " or newer, success!)")
+			trace("[Campfire] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + " (expected " + FormatSKSEVersion(skse_min_version) + " or newer, success!)")
 		endif
+	else
+		; SKSE is not installed, or was uninstalled since the last save. Fall back to reduced functionality.
+		isSKSELoaded = false
+		Conditions.IsSKSELoaded = false
+		trace("[Campfire][Warning] " + skse_name + " was not detected. Campfire will run with reduced functionality.")
 	endif
 
 	if isSKYUILoaded
@@ -268,9 +288,6 @@ function RunCompatibility()
 			;SkyUI was just loaded.
 		endif
 	endif
-
-	isSkyrimVR = IsPluginLoaded(0x00000BD7, "SkyrimVR.esm")
-	Conditions.IsSkyrimVR = isSkyrimVR
 
 	if isDLC1Loaded
 		isDLC1Loaded = IsPluginLoaded(0x02009403, "Dawnguard.esm")
@@ -649,6 +666,62 @@ bool function IsPluginLoaded(int iFormID, string sPluginName)
 	else
 		return false
 	endif
+endFunction
+
+; Identifies which Skyrim runtime we are running on.
+; SKSE 1.x is the 32-bit Legendary Edition build; SKSE64 and SKSEVR both report 2.x.
+; Skyrim VR is told apart from Special Edition by its own master file. When SKSE is
+; absent there is nothing to read the runtime from, so we fall back to the
+; _Camp_IsSpecialEdition global, which the Special Edition build of Campfire sets to 2.
+function DetectGameRuntime(int aiSKSEVersionMajor)
+	isSkyrimVR = IsPluginLoaded(0x00000BD7, "SkyrimVR.esm")
+	if aiSKSEVersionMajor >= 2
+		isSkyrimSE = !isSkyrimVR
+	elseif aiSKSEVersionMajor == 0 && _Camp_IsSpecialEdition
+		isSkyrimSE = !isSkyrimVR && _Camp_IsSpecialEdition.GetValueInt() == 2
+	else
+		isSkyrimSE = false
+	endif
+
+	Conditions.IsSkyrimVR = isSkyrimVR
+	Conditions.IsSpecialEdition = isSkyrimSE
+
+	if isSkyrimVR
+		trace("[Campfire] Detected runtime: Skyrim VR.")
+	elseif isSkyrimSE
+		trace("[Campfire] Detected runtime: Skyrim Special Edition.")
+	else
+		trace("[Campfire] Detected runtime: Skyrim Legendary Edition.")
+	endif
+endFunction
+
+; The minimum SKSE version Campfire supports on the current runtime.
+int function GetRequiredSKSEVersion()
+	if isSkyrimVR
+		return SKSE_MIN_VERSION_VR
+	elseif isSkyrimSE
+		return SKSE_MIN_VERSION_SE
+	endif
+	return SKSE_MIN_VERSION_LE
+endFunction
+
+; The name of the SKSE build expected on the current runtime, for logging.
+string function GetSKSEName()
+	if isSkyrimVR
+		return "SKSEVR"
+	elseif isSkyrimSE
+		return "SKSE64"
+	endif
+	return "SKSE"
+endFunction
+
+; Renders an encoded SKSE version as major.minor.build. Printing the encoded value as a
+; float renders SKSE64 2.0.20 as "2.002", which reads as older than SKSE 1.7.3.
+string function FormatSKSEVersion(int aiVersion)
+	int major = aiVersion / 10000
+	int minor = (aiVersion % 10000) / 100
+	int build = aiVersion % 100
+	return (major as string) + "." + (minor as string) + "." + (build as string)
 endFunction
 
 function Upgrade_1_1()

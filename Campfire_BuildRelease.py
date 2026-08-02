@@ -1,103 +1,81 @@
 import os
 import shutil
-import subprocess
 
-print " "
-print "=============================="
-print "|  Campfire Release Builder  |"
-print "|            .(              |"
-print "|           /%/\             |"
-print "|          (%(%))            |"
-print "|         .-'..`-.           |"
-print "|         `-'.'`-'           |"
-print "=============================="
-print " "
-user_input = raw_input("Enter the release version: ")
-game_input = raw_input("(C)lassic Skyrim or Skyrim (SE)?")
+import buildcommon
+from buildcommon import (
+    BUILD_ROOT,
+    GAME_SKSE_PLUGIN,
+    copy_file,
+    copy_manifest,
+    externals_path,
+    make_release_zip,
+    project_path,
+    prompt_game,
+    prompt_version,
+    reset_directory,
+    run_archiver,
+)
 
-if game_input == "C":
-    print "Generating Classic Skyrim build."
-elif game_input == "SE":
-    print "Generating Skyrim SE build."
-else:
-    print "Unknown game type entered. Please enter C or SE."
-    exit()
+print(" ")
+print("==============================")
+print("|  Campfire Release Builder  |")
+print("|            .(              |")
+print("|           /%/\\             |")
+print("|          (%(%))            |")
+print("|         .-'..`-.           |")
+print("|         `-'.'`-'           |")
+print("==============================")
+print(" ")
 
-os.chdir("..\\")
+version = prompt_version()
+game = prompt_game()
 
-# Build the temp directory
-print "Creating temp directories..."
-tempdir = ".\\tmp\\Data\\"
-os.makedirs('./tmp/Data/readmes')
-os.makedirs('./tmp/Data/Interface/campfire')
-os.makedirs('./tmp/Data/Interface/Translations')
-os.makedirs('./tmp/Data/meshes/campfire')
-os.makedirs('./tmp/Data/meshes/mps')
-os.makedirs('./tmp/Data/Scripts/Source')
-os.makedirs('./tmp/Data/textures/campfire')
+# Stage the BSA contents.
+print("Creating temp directories...")
+tempdir = reset_directory(os.path.join(BUILD_ROOT, "tmp"))
+datadir = os.path.join(tempdir, "Data")
 
-# Copy the project files
-print "Copying project files..."
-with open("./Campfire/CampfireArchiveManifest.txt") as manifest:
-    lines = manifest.readlines()
-    for line in lines:
-        shutil.copy(".\\Campfire\\" + line.rstrip('\n'), tempdir + line.rstrip('\n'))
+print("Copying project files...")
+copy_manifest(project_path("CampfireArchiveManifest.txt"), buildcommon.PROJECT_DIR, datadir)
 
-print "Copying external dependencies..."
-with open("./Campfire/CampfireArchiveManifestExternal.txt") as manifest:
-    lines = manifest.readlines()
-    if game_input == "C":
-        for line in lines:
-            shutil.copy(".\\Campfire\\external\\Skyrim\\" + line.rstrip('\n'), tempdir + line.rstrip('\n'))
-    elif game_input == "SE":
-        for line in lines:
-            shutil.copy(".\\Campfire\\external\\SkyrimSE\\" + line.rstrip('\n'), tempdir + line.rstrip('\n'))
+# The external dependencies differ per runtime and overwrite the project copies.
+print("Copying external dependencies...")
+copy_manifest(project_path("CampfireArchiveManifestExternal.txt"), externals_path(game), datadir)
 
-# Build the directories
-dirname = "./Campfire " + user_input + " Release"
-if not os.path.isdir(dirname):
-    print "Creating new build..."
-    os.makedirs(dirname + "/Campfire")
-else:
-    print "Removing old build of same version..."
-    shutil.rmtree(dirname)
-    os.mkdir(dirname)
+# Build the release directory.
+dirname = os.path.join(BUILD_ROOT, "Campfire " + version + " Release")
+print("Creating build directory...")
+reset_directory(dirname)
 
-os.makedirs(dirname + "/readmes")
-os.makedirs(dirname + "/SKSE/Plugins/CampfireData")
+# Generate BSA archive.
+print("Generating BSA archive...")
+copy_file(externals_path(game, "Archive.exe"), os.path.join(tempdir, "Archive.exe"))
+copy_file(project_path("CampfireArchiveBuilder.txt"), os.path.join(tempdir, "CampfireArchiveBuilder.txt"))
+copy_file(project_path("CampfireArchiveManifest.txt"), os.path.join(tempdir, "CampfireArchiveManifest.txt"))
 
-# Generate BSA archive
-print "Generating BSA archive..."
-if game_input == "C":
-    shutil.copy('./Campfire/external/Skyrim/Archive.exe', './tmp/Archive.exe')
-elif game_input == "SE":
-    shutil.copy('./Campfire/external/SkyrimSE/Archive.exe', './tmp/Archive.exe')
-shutil.copy('./Campfire/CampfireArchiveBuilder.txt', './tmp/CampfireArchiveBuilder.txt')
-shutil.copy('./Campfire/CampfireArchiveManifest.txt', './tmp/CampfireArchiveManifest.txt')
-
-os.chdir("./tmp")
-subprocess.call(['./Archive.exe', './CampfireArchiveBuilder.txt'])
-os.chdir("..\\")
+run_archiver(tempdir, "CampfireArchiveBuilder.txt", "CampfireArchiveLog.txt")
 
 # Copy files - Mod
-shutil.copyfile("./Campfire/Campfire.esm", dirname + "/Campfire.esm")
-shutil.copyfile("./tmp/Campfire.bsa", dirname + "/Campfire.bsa")
-shutil.copyfile("./Campfire/SKSE/Plugins/CampfireData/READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt", dirname + "/SKSE/Plugins/CampfireData/READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt")
-if game_input == "C":
-    shutil.copyfile("./Campfire/external/Skyrim/SKSE/Plugins/StorageUtil.dll", dirname + "/SKSE/Plugins/StorageUtil.dll")
-elif game_input == "SE":
-    shutil.copyfile("./Campfire/external/SkyrimSE/SKSE/Plugins/PapyrusUtil.dll", dirname + "/SKSE/Plugins/PapyrusUtil.dll")
-shutil.copyfile("./Campfire/readmes/Campfire_readme.txt", dirname + "/readmes/Campfire_readme.txt")
-shutil.copyfile("./Campfire/readmes/Campfire_license.txt", dirname + "/readmes/Campfire_license.txt")
-shutil.copyfile("./Campfire/readmes/Campfire_changelog.txt", dirname + "/readmes/Campfire_changelog.txt")
+copy_file(project_path("Campfire.esm"), os.path.join(dirname, "Campfire.esm"))
+copy_file(os.path.join(tempdir, "Campfire.bsa"), os.path.join(dirname, "Campfire.bsa"))
+copy_file(
+    project_path("SKSE", "Plugins", "CampfireData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),
+    os.path.join(dirname, "SKSE", "Plugins", "CampfireData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),
+)
+
+skse_plugin = GAME_SKSE_PLUGIN[game]
+copy_file(
+    externals_path(game, "SKSE", "Plugins", skse_plugin),
+    os.path.join(dirname, "SKSE", "Plugins", skse_plugin),
+)
+
+for readme in ("Campfire_readme.txt", "Campfire_license.txt", "Campfire_changelog.txt"):
+    copy_file(project_path("readmes", readme), os.path.join(dirname, "readmes", readme))
 
 # Clean Up
-print "Removing temp files..."
-shutil.rmtree("./tmp")
+print("Removing temp files...")
+shutil.rmtree(tempdir)
 
 # Create release zip
-zip_name_ver = user_input.replace(".", "_")
-shutil.make_archive("./Campfire_" + zip_name_ver + "_Release", format="zip", root_dir=dirname)
-shutil.move("./Campfire_" + zip_name_ver + "_Release.zip", dirname + "/Campfire_" + zip_name_ver + "_Release.zip")
-print "Created " + dirname + "/Campfire_" + zip_name_ver + "_Release.zip"
-print "Done!"
+make_release_zip(dirname, "Campfire_" + version.replace(".", "_") + "_Release")
+print("Done!")

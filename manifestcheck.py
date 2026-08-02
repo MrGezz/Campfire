@@ -1,61 +1,90 @@
+"""Cross-check a release manifest against the files actually in the project directory.
+
+Usage:
+    python manifestcheck.py <manifest file> <mod name> [filename prefixes to ignore...]
+"""
+
+import os
 import sys
-import os.path
-from os import listdir
-from os.path import isfile, join
 
-def ParseManifest():
-    with open("./" + sys.argv[1]) as manifest:
-        lines = manifest.readlines()
-        all_files_present = True
-        for line in lines:
-            if not os.path.isfile(".\\" + line.rstrip('\n')):
-                print "    " + str(line.rstrip('\n').replace('//', '/') + " was not found in the project directory.")
-                all_files_present = False
+from buildcommon import normalize, project_path, read_manifest
 
-        if all_files_present == True:
-            print "    OK - All files in manifest found."
 
-def ParseDir(dir_to_check):
-    if not os.path.isdir(dir_to_check):
-        print "    OK - Skipping " + dir_to_check.replace("//", "/")
+def parse_manifest(manifest_file):
+    """Report manifest entries that have no matching file in the project directory."""
+    all_files_present = True
+    for entry in read_manifest(manifest_file):
+        if not os.path.isfile(project_path(entry)):
+            print("    " + entry + " was not found in the project directory.")
+            all_files_present = False
+
+    if all_files_present:
+        print("    OK - All files in manifest found.")
+
+
+def parse_dir(dir_to_check, manifest_text, ignored_prefixes):
+    """Report files in a project directory that the manifest does not list."""
+    full_path = project_path(dir_to_check)
+    if not os.path.isdir(full_path):
+        print("    OK - Skipping " + dir_to_check)
         return
 
-    onlyfiles = [ f for f in listdir(dir_to_check) if isfile(join(dir_to_check,f)) ]
     all_files_present = True
-    for file in onlyfiles:
-        if not file in open(sys.argv[1]).read():
-            # Check exception tags
-            exception_found = False
-            for idx, tag in enumerate(sys.argv):
-                if idx >= 3:
-                    if file.startswith(tag):
-                        exception_found = True
-                        break
-                        
-            if exception_found == False:
-                print "    WARN - " + dir_to_check.replace('//', '/') + ": " + str(file) + " found in project directory, but not in manifest file!"
-                all_files_present = False
+    for name in sorted(os.listdir(full_path)):
+        if not os.path.isfile(os.path.join(full_path, name)):
+            continue
+        if name in manifest_text:
+            continue
+        if any(name.startswith(prefix) for prefix in ignored_prefixes):
+            continue
 
-    if all_files_present == True:
-        print "    OK - " + dir_to_check.replace('//', '/')
+        print("    WARN - " + dir_to_check + ": " + name + " found in project directory, but not in manifest file!")
+        all_files_present = False
 
-if sys.argv[1] is None:
-    print "Invalid parameters."
-else:
-    print "==============================================================="
-    print "  Checking " + sys.argv[2] + " project files..."
-    print "==============================================================="
-    print "  Parsing manifest..."
-    ParseManifest()
-    print "  Parsing project directories..."
-    ParseDir(".//readmes")
-    ParseDir(".//Interface//" + sys.argv[2])
-    ParseDir(".//Interface//exported//widgets//" + sys.argv[2])
-    ParseDir(".//Interface//Translations//")
-    ParseDir(".//meshes//" + sys.argv[2])
-    ParseDir(".//textures//" + sys.argv[2])
-    ParseDir(".//Scripts")
-    ParseDir(".//Scripts//Source")
-    ParseDir(".//SEQ")
-    ParseDir(".//sound//fx//" + sys.argv[2])
-    
+    if all_files_present:
+        print("    OK - " + dir_to_check)
+
+
+def main():
+    if len(sys.argv) < 3:
+        print(__doc__)
+        return 1
+
+    manifest_file = project_path(normalize(sys.argv[1]))
+    mod_name = sys.argv[2]
+    ignored_prefixes = sys.argv[3:]
+
+    if not os.path.isfile(manifest_file):
+        print("Manifest not found: " + manifest_file)
+        return 1
+
+    with open(manifest_file) as manifest:
+        manifest_text = manifest.read()
+
+    print("===============================================================")
+    print("  Checking " + mod_name + " project files...")
+    print("===============================================================")
+    print("  Parsing manifest...")
+    parse_manifest(manifest_file)
+    print("  Parsing project directories...")
+
+    directories = [
+        "readmes",
+        os.path.join("Interface", mod_name),
+        os.path.join("Interface", "exported", "widgets", mod_name),
+        os.path.join("Interface", "Translations"),
+        os.path.join("meshes", mod_name),
+        os.path.join("textures", mod_name),
+        "Scripts",
+        os.path.join("Scripts", "Source"),
+        "SEQ",
+        os.path.join("sound", "fx", mod_name),
+    ]
+    for directory in directories:
+        parse_dir(directory, manifest_text, ignored_prefixes)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
