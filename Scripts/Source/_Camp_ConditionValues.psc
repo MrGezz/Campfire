@@ -28,6 +28,7 @@ bool property IsChoppingWoodEnvironment = false auto conditional hidden
 
 ; Compatibility
 bool property IsSkyrimVR = false auto conditional hidden
+bool property IsSpecialEdition = false auto conditional hidden
 bool property IsSKSELoaded = false auto conditional hidden
 bool property IsHearthfireLoaded = false auto conditional hidden
 bool property IsDawnguardLoaded = false auto conditional hidden

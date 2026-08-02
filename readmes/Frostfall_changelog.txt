@@ -17,6 +17,16 @@ E-mail - chesko.tesmod@gmail.com
 This changelog is mainly for posterity purposes. This mod has evolved a lot in the amount of time it's been in development. Read on only if you enjoy watching me change my mind many, many times.
 
 ===========================================
+Frostfall 3.5 Change Log
+===========================================
+
+- (Special Edition) Frostfall now detects and uses SKSE64. Previously, Frostfall skipped SKSE detection entirely on Special Edition and always ran in Fallback Mode, which disabled the equipment data store, custom armor protection data, and the SkyUI meter widgets.
+- Frostfall now requires the build of SKSE matching your runtime: SKSE 1.7.3+ on Legendary Edition, SKSE64 2.0.20+ on Special Edition, SKSEVR 2.0.12+ on VR. The Papyrus log reports which runtime was detected.
+- (Special Edition) Fixed light (ESL-flagged) plugins being reported as not loaded during compatibility checks.
+- (Special Edition) Fixed the SkyUI meter widget not being created when upgrading from Frostfall 3.1 or earlier, because only SkyUI.esp was searched and not SkyUI_SE.esp.
+- Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be resolved.
+
+===========================================
 Frostfall 3.4.1 Change Log
 ===========================================
 

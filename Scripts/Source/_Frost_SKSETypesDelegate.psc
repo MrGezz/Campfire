@@ -34,7 +34,14 @@ endFunction
 
 Event Upgrade_3_2()
 	SKI_WidgetManager manager = (Game.GetFormFromFile(0x00000824, "SkyUI.esp") as Quest) as SKI_WidgetManager
-	int id = ((ExposureMeterHandler as Quest) as _Frost_Meter).WidgetID		
+	if !manager
+		manager = (Game.GetFormFromFile(0x00000824, "SkyUI_SE.esp") as Quest) as SKI_WidgetManager
+	endif
+	if !manager
+		debug.trace("[Frostfall][Warning] SkyUI widget manager not found. Skipping meter widget upgrade.")
+		return
+	endif
+	int id = ((ExposureMeterHandler as Quest) as _Frost_Meter).WidgetID
 	manager.CreateWidget(id, "frostfall/meterIndicator.swf")
 	ExposureMeterHandler.meter_inversion_value = -1.0
 	ExposureMeterHandler.improvement_display_delta_threshold = 2.0
@@ -77,6 +84,11 @@ Event Compatibility_CheckInterfacePackage()
 		SKI_Main skyui = Game.GetFormFromFile(0x00000814, "SkyUI.esp") as SKI_Main
 		if !skyui
 			skyui = Game.GetFormFromFile(0x00000814, "SkyUI_SE.esp") as SKI_Main
+		endif
+		if !skyui
+			GetCompatibilitySystem().isUIPackageInstalled = false
+			GetCompatibilitySystem().FatalErrorSkyUIPackage(5)
+			return
 		endif
 		int skyui_version = skyui.ReqSWFRelease
 		if skyui_version >= 1026 	; SkyUI 5.1+
