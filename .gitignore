@@ -67,9 +67,13 @@
 !Interface/*.swf
 
 #Meshes
-!Meshes/campfire/*
-!Meshes/frostfall/*
-!Meshes/lastseed/*
+#Paths are case sensitive. These were "Meshes/" while the directory on disk is
+#"meshes/", so newly added meshes were silently ignored; existing ones survived
+#only because .gitignore does not affect already-tracked files.
+!meshes/campfire/*
+!meshes/frostfall/*
+!meshes/lastseed/*
+!meshes/mps/*
 
 #Readmes
 !readmes/Frostfall*.txt
@@ -110,6 +114,8 @@
 
 #Brawl Bug Patch Scripts
 !BladesSparringScript.pex
+!C00JorrvaskrFightAthisScript.pex
+!C00JorrvaskrFightNjadaScript.pex
 !C00TrainerScript.pex
 !C00VilkasScript.pex
 !CompanionsSingleCombatantScript.pex
@@ -117,12 +123,36 @@
 !DGIntimidatePlayerScript.pex
 !MS11CalixtoScript.pex
 !BladesSparringScript.psc
+!C00JorrvaskrFightAthisScript.psc
+!C00JorrvaskrFightNjadaScript.psc
 !C00TrainerScript.psc
 !C00VilkasScript.psc
 !CompanionsSingleCombatantScript.psc
 !DGIntimidateAliasScript.psc
 !DGIntimidatePlayerScript.psc
 !MS11CalixtoScript.psc
+
+#CheskoPapyrusShared files
+#Shared libraries from https://github.com/chesko256/CheskoPapyrusShared (MIT).
+#Shipped inside the Campfire BSA; see CampfireArchiveManifest.txt.
+!CommonArrayHelper.pex
+!CommonArrayHelper.psc
+!CommonHelperFunctions.pex
+!CommonHelperFunctions.psc
+!CommonMeterInterfaceHandler.pex
+!CommonMeterInterfaceHandler.psc
+!Common_SKI_MeterWidget.pex
+!Common_SKI_MeterWidget.psc
+!FallbackEventEmitter.pex
+!FallbackEventEmitter.psc
+!FallbackEventHandler.pex
+!FallbackEventHandler.psc
+!FallbackEventReceiverActiveMagicEffect.pex
+!FallbackEventReceiverActiveMagicEffect.psc
+!FallbackEventReceiverAlias.pex
+!FallbackEventReceiverAlias.psc
+!FallbackEventReceiverForm.pex
+!FallbackEventReceiverForm.psc
 
 #PapyrusUtil files
 !StorageUtil.dll
