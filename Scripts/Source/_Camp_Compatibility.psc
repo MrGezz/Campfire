@@ -670,9 +670,19 @@ endFunction
 
 ; Identifies which Skyrim runtime we are running on.
 ; SKSE 1.x is the 32-bit Legendary Edition build; SKSE64 and SKSEVR both report 2.x.
-; Skyrim VR is told apart from Special Edition by its own master file. When SKSE is
-; absent there is nothing to read the runtime from, so we fall back to the
-; _Camp_IsSpecialEdition global, which the Special Edition build of Campfire sets to 2.
+; Skyrim VR is told apart from Special Edition by its own master file.
+;
+; UNVERIFIED: 0x00000BD7 has not been read out of a shipped SkyrimVR.esm - confirm it in
+; SSEEdit. Getting it wrong costs nothing on Special Edition, where SkyrimVR.esm is never
+; present and the lookup correctly fails, but it would leave a VR game running the Special
+; Edition code paths and silently disable the VR handling in CampCampfire, CampTent and
+; _Camp_LightFireFurnScript.
+;
+; When SKSE is absent there is nothing to read the runtime from, so we fall back to the
+; _Camp_IsSpecialEdition global. That global has to be set to 2 in the Special Edition
+; build of Campfire.esm; this repository ships a single plugin for both runtimes and
+; currently leaves it at 1, so the fallback identifies a Special Edition game with no SKSE
+; installed as Legendary Edition. ssecheck.py fails a Special Edition build over it.
 function DetectGameRuntime(int aiSKSEVersionMajor)
 	isSkyrimVR = IsPluginLoaded(0x00000BD7, "SkyrimVR.esm")
 	if aiSKSEVersionMajor >= 2

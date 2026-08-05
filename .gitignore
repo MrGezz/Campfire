@@ -25,6 +25,11 @@
 !CampDevKitArchiveManifest.txt
 !FrostDevKitArchiveManifest.txt
 
+#Special Edition asset validation
+!ssecheck.py
+!plugindiff.py
+!ckstage.py
+
 #Manifest Validation
 !manifestcheck.py
 !_Camp_ManifestCheck.bat
@@ -50,16 +55,27 @@
 !backpacks_old/textures/*
 
 #Installers
+#The fomod ModuleConfig references InstallSplash1.jpg and InstallSplash2.jpg, which sit
+#next to the fomod directory rather than inside it, so the directories themselves have to
+#be whitelisted or the Frostfall builder can never find them.
+!Installers/Campfire/*
 !Installers/Campfire/fomod/*
+!Installers/Frostfall/*
 !Installers/Frostfall/fomod/*
 
 #Interface
 !Interface/frostfall/*
 !Interface/campfire/*
 !Interface/lastseed/*
+#Patterns are case sensitive on Linux and macOS. The shipped translation files are
+#lowercase, to match the manifests; the capitalised patterns are kept for older branches.
 !Interface/Translations/Chesko_Frostfall_*.txt
 !Interface/Translations/Frostfall_*.txt
 !Interface/Translations/Campfire*.txt
+!Interface/Translations/chesko_frostfall_*.txt
+!Interface/Translations/frostfall_*.txt
+!Interface/Translations/campfire*.txt
+!Interface/Translations/lastseed*.txt
 !Interface/exported/widgets/frostfall/*
 !Interface/exported/widgets/lastseed/*
 !Interface/skyui/*
@@ -154,6 +170,9 @@
 !FallbackEventReceiverForm.pex
 !FallbackEventReceiverForm.psc
 
+#Special Edition mesh conversion, built from NifOptCLI/ (nifly + SSE NIF Optimizer)
+!nifopt.exe
+
 #PapyrusUtil files
 !StorageUtil.dll
 !PapyrusUtil.dll
@@ -188,7 +207,9 @@
 !textures/lastseed/old_backup/PSDs/*
 
 #SKSE Data
+!SKSE/Plugins/CampfireData/*
 !SKSE/Plugins/FrostfallData/*
+!SKSE/Plugins/LastSeedData/*
 
 #Working / raw files
 !WorkingFiles/*

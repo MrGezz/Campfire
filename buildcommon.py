@@ -59,7 +59,118 @@ def prompt_game():
     if answer not in GAME_EXTERNALS:
         fail("Unknown game type '%s'. Please enter C or SE." % answer)
     print("Generating %s build." % GAME_NAMES[answer])
+    verify_runtime_assets(answer)
     return answer
+
+
+def verify_runtime_assets(game):
+    """Abort before staging anything if the checkout is not in this runtime's format.
+
+    Special Edition loads Legendary Edition plugins and meshes, so an unconverted
+    checkout builds cleanly and only fails in game, on somebody else's save. See
+    ssecheck.py for what is checked and why.
+    """
+    if game != "SE":
+        return
+
+    import ssecheck
+
+    problems = ssecheck.check_special_edition_plugins()
+    if problems:
+        fail(
+            "This checkout is not in Special Edition format (%d problem(s)):\n    %s\n"
+            "    Run 'python ssecheck.py' after converting to re-check."
+            % (len(problems), "\n    ".join(problems))
+        )
+
+
+def optimize_staged_meshes(game, datadir):
+    """Convert the staged meshes to Special Edition format in place.
+
+    meshes/ is kept in Legendary Edition format so one source tree still builds both
+    runtimes; the conversion happens on the copies under the staging directory, just
+    before they are packed into the BSA.
+
+    nifopt is a headless build of the SSE NIF Optimizer pipeline (nifly's
+    NifFile::OptimizeFor plus the optimizer's skinning cleanup). Its source and build
+    script are in NifOptCLI/, alongside the nifly and SSE-NIF-Optimizer checkouts.
+    """
+    if game != "SE":
+        return
+
+    meshes = os.path.join(datadir, "meshes")
+    if not os.path.isdir(meshes):
+        return
+
+    optimizer = os.path.join(GAME_EXTERNALS[game], "nifopt.exe")
+    if not os.path.isfile(optimizer):
+        fail(
+            "nifopt.exe is missing from %s.\n"
+            "    It converts the staged meshes to Special Edition format. Build it with\n"
+            "    NifOptCLI\\build.bat and copy the result next to Archive.exe."
+            % os.path.dirname(optimizer)
+        )
+
+    import subprocess
+
+    print("Converting staged meshes to Special Edition format...")
+    try:
+        result = subprocess.call([optimizer, meshes])
+    except OSError as error:
+        fail("Could not run %s: %s" % (optimizer, error))
+
+    if result != 0:
+        fail("nifopt failed with exit code %d; the staged meshes were not all converted." % result)
+
+
+def stamp_runtime_plugin(game, path):
+    """Mark a staged plugin as the Special Edition build.
+
+    _Camp_IsSpecialEdition is the signal the compatibility scripts fall back to when SKSE
+    is not installed and there is nothing else to read the runtime from. It has to be 2 on
+    Special Edition and 1 on Legendary Edition, which a single shared plugin cannot be, so
+    the value is stamped into the copy in the release directory rather than committed -
+    the same approach as the meshes.
+    """
+    if game != "SE":
+        return
+
+    import ssecheck
+
+    previous = ssecheck.stamp_special_edition(path)
+    if previous is None:
+        fail(
+            "%s has no %s global. The compatibility scripts read it to identify the "
+            "runtime when SKSE is not installed."
+            % (os.path.basename(path), ssecheck.SPECIAL_EDITION_GLOBAL)
+        )
+    print(
+        "Marked %s as the Special Edition build (%s: %g -> %g)."
+        % (
+            os.path.basename(path),
+            ssecheck.SPECIAL_EDITION_GLOBAL,
+            previous,
+            ssecheck.SPECIAL_EDITION_GLOBAL_VALUE,
+        )
+    )
+
+
+def require_skse_plugin(game):
+    """The path to the SKSE plugin this runtime ships, or a readable failure.
+
+    PapyrusUtil is not committed here, so a fresh checkout has the Special Edition
+    scripts but not the DLL that goes with them.
+    """
+    plugin = os.path.join(GAME_EXTERNALS[game], "SKSE", "Plugins", GAME_SKSE_PLUGIN[game])
+    if not os.path.isfile(plugin):
+        fail(
+            "%s is missing.\n"
+            "    Campfire ships PapyrusUtil for the player; it is not committed here.\n"
+            "    Download the %s build and drop the DLL at:\n"
+            "        %s\n"
+            "    See external/README.md." % (GAME_SKSE_PLUGIN[game], GAME_NAMES[game], plugin)
+        )
+    return plugin
 
 
 def project_path(*parts):
@@ -100,6 +211,20 @@ def copy_file(source, destination):
     if destination_dir:
         os.makedirs(destination_dir, exist_ok=True)
     shutil.copyfile(source, destination)
+
+
+def copy_optional_file(source, destination, purpose):
+    """Copy a file if it is there, warn if it is not. Returns whether it was copied.
+
+    For presentation assets - installer splash images and the like - that are not worth
+    blocking a release over.
+    """
+    if not os.path.isfile(source):
+        print("WARNING: %s is missing, skipping. (%s)" % (source, purpose))
+        return False
+
+    copy_file(source, destination)
+    return True
 
 
 def copy_manifest(manifest_file, source_dir, destination_dir):

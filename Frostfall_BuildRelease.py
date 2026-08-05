@@ -6,8 +6,10 @@ from buildcommon import (
     BUILD_ROOT,
     copy_file,
     copy_manifest,
+    copy_optional_file,
     externals_path,
     make_release_zip,
+    optimize_staged_meshes,
     project_path,
     prompt_game,
     prompt_version,
@@ -37,6 +39,9 @@ datadir = os.path.join(tempdir, "Data")
 
 print("Copying project files...")
 copy_manifest(project_path("FrostfallArchiveManifest.txt"), buildcommon.PROJECT_DIR, datadir)
+
+# meshes/ is kept in Legendary Edition format; the staged copies are converted instead.
+optimize_staged_meshes(game, datadir)
 
 # Frostfall does not ship PapyrusUtil itself; it uses the copy installed by Campfire.
 # Only the archiver differs between runtimes.
@@ -94,8 +99,14 @@ for language in translations:
     )
 
 # Copy files - Installer
+# The splash images are referenced by fomod/ModuleConfig.xml but are not committed here.
+# A fomod without them still installs, so the build warns rather than stopping.
 for splash in ("InstallSplash1.jpg", "InstallSplash2.jpg"):
-    copy_file(project_path("Installers", "Frostfall", splash), os.path.join(dirname, splash))
+    copy_optional_file(
+        project_path("Installers", "Frostfall", splash),
+        os.path.join(dirname, splash),
+        "fomod installer image",
+    )
 
 for fomod_file in ("info.xml", "ModuleConfig.xml"):
     copy_file(

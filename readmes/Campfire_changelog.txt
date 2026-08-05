@@ -15,6 +15,7 @@ Change Log
 - The Papyrus log now reports the detected runtime and prints SKSE versions as major.minor.build, so SKSE64 2.0.20 no longer reads as "2.002".
 
 ### Bug Fixes
+- **(Special Edition)** Meshes are now converted to the Special Edition format when the release is built, instead of shipping the Legendary Edition versions.
 - **(Special Edition)** Fixed light (ESL-flagged) plugins being reported as not loaded during compatibility checks.
 - Fixed Campfire continuing to believe SKSE was present after SKSE was uninstalled between saves.
 - Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be resolved.

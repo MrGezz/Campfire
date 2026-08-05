@@ -1,0 +1,6 @@
+Campfire Data Files
+===================
+
+The purpose of the files in Skyrim/Data/SKSE/Plugins/CampfireData are to store Campfire's Settings Profile data. These files are created and are required in order for Campfire to run.
+
+Please DO NOT delete the files created in this directory, or all of your mod settings for Campfire will be reset.

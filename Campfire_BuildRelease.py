@@ -9,11 +9,14 @@ from buildcommon import (
     copy_manifest,
     externals_path,
     make_release_zip,
+    optimize_staged_meshes,
     project_path,
     prompt_game,
     prompt_version,
+    require_skse_plugin,
     reset_directory,
     run_archiver,
+    stamp_runtime_plugin,
 )
 
 print(" ")
@@ -42,6 +45,9 @@ copy_manifest(project_path("CampfireArchiveManifest.txt"), buildcommon.PROJECT_D
 print("Copying external dependencies...")
 copy_manifest(project_path("CampfireArchiveManifestExternal.txt"), externals_path(game), datadir)
 
+# meshes/ is kept in Legendary Edition format; the staged copies are converted instead.
+optimize_staged_meshes(game, datadir)
+
 # Build the release directory.
 dirname = os.path.join(BUILD_ROOT, "Campfire " + version + " Release")
 print("Creating build directory...")
@@ -56,7 +62,9 @@ copy_file(project_path("CampfireArchiveManifest.txt"), os.path.join(tempdir, "Ca
 run_archiver(tempdir, "CampfireArchiveBuilder.txt", "CampfireArchiveLog.txt")
 
 # Copy files - Mod
-copy_file(project_path("Campfire.esm"), os.path.join(dirname, "Campfire.esm"))
+esm = os.path.join(dirname, "Campfire.esm")
+copy_file(project_path("Campfire.esm"), esm)
+stamp_runtime_plugin(game, esm)
 copy_file(os.path.join(tempdir, "Campfire.bsa"), os.path.join(dirname, "Campfire.bsa"))
 copy_file(
     project_path("SKSE", "Plugins", "CampfireData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),
@@ -65,7 +73,7 @@ copy_file(
 
 skse_plugin = GAME_SKSE_PLUGIN[game]
 copy_file(
-    externals_path(game, "SKSE", "Plugins", skse_plugin),
+    require_skse_plugin(game),
     os.path.join(dirname, "SKSE", "Plugins", skse_plugin),
 )
 

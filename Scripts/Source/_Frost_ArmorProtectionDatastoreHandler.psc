@@ -88,6 +88,14 @@ int property SLOTMASK_EARS 						= 0x00002000 autoReadOnly hidden
 int property SLOTMASK_CLOAK 					= 0x00010000 autoReadOnly hidden
 int property SLOTMASK_BACKPACK 					= 0x00020000 autoReadOnly hidden
 
+; Special Edition light ("ESL-flagged") plugin FormID layout: 0xFE_LLL_FFF, i.e. the
+; reserved mod index 0xFE, a 12-bit light plugin index, and a 12-bit form index.
+int property LIGHT_MOD_INDEX 					= 0xFE autoReadOnly hidden
+int property LIGHT_MOD_INDEX_MASK 				= 0x00FFF000 autoReadOnly hidden
+int property LIGHT_MOD_FORMID_MASK 				= 0x00000FFF autoReadOnly hidden
+int property LIGHT_MOD_INDEX_DIVISOR 			= 0x1000 autoReadOnly hidden
+int property LIGHT_MOD_NAME_OFFSET 				= 0x100 autoReadOnly hidden
+
 int property GEARTYPE_NOTFOUND 					= 0 autoReadOnly hidden
 int property GEARTYPE_BODY 						= 1 autoReadOnly hidden
 int property GEARTYPE_HEAD 						= 2 autoReadOnly hidden
@@ -855,12 +863,32 @@ string function GetDatastoreKeyFromForm(Armor akArmor)
 	return GetDatastoreKeyFromID(form_id)
 endFunction
 
+; The datastore key must survive a load order change, so it is built from the part of the
+; FormID the plugin owns plus the plugin's file name, never from the load order index.
+;
+; On Special Edition every light ("ESL-flagged") plugin is stamped with mod index 0xFE and
+; carries its own index inside the FormID instead. Reading one as a full plugin gives
+; Game.GetModName(254) - an empty string unless 255 full plugins happen to be loaded - and
+; a "base" form ID that still contains the light plugin index, so the key of every ESL
+; armor changed whenever an ESL was added, removed or reordered, silently discarding the
+; player's warmth and coverage edits for it.
+;
+; SKSE64 exposes light plugin names through the same Game.GetModName() native, at
+; LIGHT_MOD_NAME_OFFSET + light index (skse64\skse64\PapyrusGame.cpp, GetModName). Light
+; plugin support in that native landed in SKSE64 2.0.13, below the 2.0.20 minimum Campfire
+; enforces on Special Edition. Legendary Edition has no light plugins, so that branch never
+; runs there and no function outside SKSE 1.7.3 is called.
 string function GetDatastoreKeyFromID(int aiFormID)
-	; Values of aiFormID larger than 0x80000000 will be negative and require conversion
-	; to obtain the mod index.
-	int mod_index = GetModIndex(aiFormID)
-	int base_form_id = GetBaseFormID(aiFormID)
-	string ds_key = base_form_id + "___" + Game.GetModName(mod_index)
+	int base_form_id
+	string plugin_name
+	if IsLightFormID(aiFormID)
+		base_form_id = GetLightBaseFormID(aiFormID)
+		plugin_name = Game.GetModName(GetLightModIndex(aiFormID) + LIGHT_MOD_NAME_OFFSET)
+	else
+		base_form_id = GetBaseFormID(aiFormID)
+		plugin_name = Game.GetModName(GetModIndex(aiFormID))
+	endif
+	string ds_key = base_form_id + "___" + plugin_name
 	return ds_key
 endFunction
 
@@ -884,6 +912,23 @@ endFunction
 
 int function GetBaseFormID(int aiFormID)
 	return LogicalAnd(aiFormID, 0x00FFFFFF)
+endFunction
+
+; True if this FormID belongs to a Special Edition light ("ESL-flagged") plugin.
+bool function IsLightFormID(int aiFormID)
+	return GetModIndex(aiFormID) == LIGHT_MOD_INDEX
+endFunction
+
+; The 12-bit light plugin index carried inside a light FormID. Division rather than
+; Math.RightShift so the mask stays readable and no extra native is involved; the masked
+; value is always positive, so truncation is not a factor.
+int function GetLightModIndex(int aiFormID)
+	return LogicalAnd(aiFormID, LIGHT_MOD_INDEX_MASK) / LIGHT_MOD_INDEX_DIVISOR
+endFunction
+
+; The part of a light FormID the plugin actually owns: the low 12 bits.
+int function GetLightBaseFormID(int aiFormID)
+	return LogicalAnd(aiFormID, LIGHT_MOD_FORMID_MASK)
 endFunction
 
 bool function DatastoreHasKey(string asKey, bool abCheckDefaultValues = true)

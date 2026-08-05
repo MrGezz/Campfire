@@ -22,8 +22,11 @@ Frostfall 3.5 Change Log
 
 - (Special Edition) Frostfall now detects and uses SKSE64. Previously, Frostfall skipped SKSE detection entirely on Special Edition and always ran in Fallback Mode, which disabled the equipment data store, custom armor protection data, and the SkyUI meter widgets.
 - Frostfall now requires the build of SKSE matching your runtime: SKSE 1.7.3+ on Legendary Edition, SKSE64 2.0.20+ on Special Edition, SKSEVR 2.0.12+ on VR. The Papyrus log reports which runtime was detected.
+- (Special Edition) Meshes are now converted to the Special Edition format when the release is built, instead of shipping the Legendary Edition versions.
 - (Special Edition) Fixed light (ESL-flagged) plugins being reported as not loaded during compatibility checks.
 - (Special Edition) Fixed the SkyUI meter widget not being created when upgrading from Frostfall 3.1 or earlier, because only SkyUI.esp was searched and not SkyUI_SE.esp.
+- (Special Edition) Fixed warmth and coverage data for armor from light (ESL-flagged) plugins. Every light plugin shares mod index 0xFE, so all such armor was stored under a key with no plugin name and a form ID that still contained the light plugin index. Editing your load order changed the key, losing your customisations; two armors in different light plugins could also end up sharing one key and overwriting each other. Armor from light plugins is now keyed on the plugin's file name and the form index it actually owns.
+  - Any protection values you had customised for armor from a light plugin will need to be set once more. Armor from ordinary plugins, and the values Frostfall ships, are unaffected.
 - Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be resolved.
 
 ===========================================

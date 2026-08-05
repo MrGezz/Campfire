@@ -37,6 +37,7 @@ function TestSuites()
 	describe("Armor Datastore GetGearType", GetGearTypeSuite())
 	describe("GetDatastoreKeyFromForm", GetDatastoreKeyFromFormSuite())
 	describe("GetDatastoreKeyFromID", GetDatastoreKeyFromIDSuite())
+	describe("Light plugin FormIDs", LightPluginFormIDSuite())
 endFunction
 
 function GetArmorProtectionDataSuite()
@@ -93,6 +94,13 @@ endFunction
 
 function GetDatastoreKeyFromIDSuite()
 	it("should get the correct datastore key for a formID", testGetDatastoreKeyFromID())
+endFunction
+
+function LightPluginFormIDSuite()
+	it("should recognize a light plugin formID", testIsLightFormID_Light())
+	it("should not mistake a high full plugin index for a light plugin", testIsLightFormID_FullPlugin())
+	it("should extract the light plugin index", testGetLightModIndex())
+	it("should extract only the form index from a light formID", testGetLightBaseFormID())
 endFunction
 
 function beforeAll()
@@ -967,4 +975,30 @@ function testGetDatastoreKeyFromID()
 
 	result = ap.GetDatastoreKeyFromID(_Frost_UnitTestWarmCloak.GetFormID())
 	expectString(result, to, beEqualTo, "2055___FrostfallTests.esp")
+endFunction
+
+; Special Edition light plugin FormIDs are laid out 0xFE_LLL_FFF. These use synthetic
+; FormIDs rather than a real ESL so the expectations do not depend on the load order of
+; the machine running the tests.
+function testIsLightFormID_Light()
+	expectBool(ap.IsLightFormID(0xFE04B123), to, beEqualTo, true)
+endFunction
+
+function testIsLightFormID_FullPlugin()
+	; 0xFD is the highest full plugin index; it must not be read as a light plugin.
+	expectBool(ap.IsLightFormID(0xFD04B123), to, beEqualTo, false)
+	expectBool(ap.IsLightFormID(0x0500B123), to, beEqualTo, false)
+endFunction
+
+function testGetLightModIndex()
+	expectInt(ap.GetLightModIndex(0xFE04B123), to, beEqualTo, 0x04B)
+	expectInt(ap.GetLightModIndex(0xFEFFF123), to, beEqualTo, 0xFFF)
+	expectInt(ap.GetLightModIndex(0xFE000123), to, beEqualTo, 0)
+endFunction
+
+function testGetLightBaseFormID()
+	; The full-plugin mask would return 0x04B123 here, which carries the light plugin
+	; index and therefore changes with the load order.
+	expectInt(ap.GetLightBaseFormID(0xFE04B123), to, beEqualTo, 0x123)
+	expectInt(ap.GetLightBaseFormID(0xFEFFFFFF), to, beEqualTo, 0xFFF)
 endFunction
