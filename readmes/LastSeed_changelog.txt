@@ -1,0 +1,41 @@
+===================================================
+
+L A S T   S E E D
+
+Primary Needs, Wellness, and Disease
+
+For The Elder Scrolls V: Skyrim
+
+Author: Chesko
+
+E-mail - chesko.tesmod@gmail.com
+
+===================================================
+
+===========================================
+Last Seed 0.2 Change Log
+===========================================
+
+- Eating and drinking animations. Food and drink now play the game's own standing or seated eating and drinking idles, the way Frostfall plays its hand-warming idle: third person while it plays, back to first person afterwards, and never in combat, with a weapon out, sneaking, riding or swimming. Tracked followers (Campfire, up to three) eat and drink when you do. Both are on by default and can be turned off on the new Effects & Notifications page of the Mod Configuration Menu, which also exposes the existing sound, full screen effect, force feedback and condition message settings.
+- Fixed the Gameplay page of the Mod Configuration Menu: every click toggled Focus, because the option ids were never compared.
+- First release that can be packaged from the Skyrim Survival repository: Last Seed now has
+  an archive manifest, a release builder, readmes, and an English MCM translation file.
+  Until now the Mod Configuration Menu showed raw $LastSeed... keys.
+- (Special Edition) Last Seed now detects and uses SKSE64, and requires the build of SKSE
+  matching your runtime: SKSE 1.7.3+ on Legendary Edition, SKSE64 2.0.20+ on Special
+  Edition, SKSEVR 2.0.12+ on VR. Previously it skipped SKSE detection entirely on Special
+  Edition and always ran in Fallback Mode.
+- (Special Edition) Fixed light (ESL-flagged) plugins being reported as not loaded during
+  compatibility checks.
+- (Special Edition) SkyUI_SE.esp is now looked up alongside SkyUI.esp in the compatibility,
+  startup and MCM scripts.
+- (Special Edition) The perished food mesh is converted to the Special Edition format when
+  the release is built.
+- Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be
+  resolved.
+
+===========================================
+Last Seed 0.1 Change Log
+===========================================
+
+- Prologue release.

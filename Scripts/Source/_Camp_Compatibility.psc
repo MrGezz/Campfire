@@ -256,19 +256,19 @@ function RunCompatibility()
 	int skse_major = SKSE.GetVersion()
 	DetectGameRuntime(skse_major)
 
-	int skse_min_version = GetRequiredSKSEVersion()
+	int required_skse_version = GetRequiredSKSEVersion()
 	string skse_name = GetSKSEName()
 	if skse_major
 		int skse_version = (skse_major * 10000) + (SKSE.GetVersionMinor() * 100) + SKSE.GetVersionBeta()
-		if skse_version < skse_min_version
-			_Camp_CriticalError_SKSE.Show(((skse_version as float) / 10000), ((skse_min_version as float) / 10000))
+		if skse_version < required_skse_version
+			_Camp_CriticalError_SKSE.Show(((skse_version as float) / 10000), ((required_skse_version as float) / 10000))
 			isSKSELoaded = false
 			Conditions.IsSKSELoaded = false
-			trace("[Campfire][Warning] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + ", out of date! Expected " + FormatSKSEVersion(skse_min_version) + " or newer.")
+			trace("[Campfire][Warning] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + ", out of date! Expected " + FormatSKSEVersion(required_skse_version) + " or newer.")
 		else
 			isSKSELoaded = true
 			Conditions.IsSKSELoaded = true
-			trace("[Campfire] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + " (expected " + FormatSKSEVersion(skse_min_version) + " or newer, success!)")
+			trace("[Campfire] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + " (expected " + FormatSKSEVersion(required_skse_version) + " or newer, success!)")
 		endif
 	else
 		; SKSE is not installed, or was uninstalled since the last save. Fall back to reduced functionality.

@@ -9,7 +9,7 @@ scriptname StorageUtil Hidden
 	other than this plugin.
 
 	Values will stay on forms or globally until they are Unset or Cleared in case of lists. If value
-	is set on a form and the object is deleted then value will be removed when saving game.
+	is set on a form and the object is deleted then THE value will be removed when saving game.
 	If you are done with using a certain variable you should use Unset or Clear function to remove them
 	but it is not required.
 
@@ -19,6 +19,7 @@ scriptname StorageUtil Hidden
 
 	Functions that start with File in the name will save values to a separate file, so that you can
 	access the same values from all savegames. This may be useful for configuration settings.
+   (FILE FUNCTIONS ARE DEPRECATED! USE JSONUTIL.PSC INSTEAD)
 
 	Saved values take very little memory - expect to use less than 500 KB of physical memory even when
 	setting thousands of values.
@@ -385,6 +386,19 @@ int[] function IntListToArray(Form ObjKey, string KeyName) global native
 float[] function FloatListToArray(Form ObjKey, string KeyName) global native
 string[] function StringListToArray(Form ObjKey, string KeyName) global native
 Form[] function FormListToArray(Form ObjKey, string KeyName) global native
+
+
+;/ Outputs a randomly selected value from the given list's elements using mt19937.
+
+   Returns the random elements value. If list is empty or doesn't exist, returns default null value.
+
+   ObjKey: form to find value on. Set none to find global list value.
+   KeyName: name of list.
+/;
+int function IntListRandom(Form ObjKey, string KeyName) global native
+float function FloatListRandom(Form ObjKey, string KeyName) global native
+string function StringListRandom(Form ObjKey, string KeyName) global native
+Form function FormListRandom(Form ObjKey, string KeyName) global native
 
 ;/ Returns array of forms from list that have (or optionally don't have) the specified form types.
    For valid list of form types, see FormType.psc or http://www.creationkit.com/GetType_-_Form

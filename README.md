@@ -12,20 +12,58 @@ Each builder asks for a version and a runtime (`C` for Legendary Edition, `SE` f
 Edition), packs the BSA with that runtime's `Archive.exe`, and writes a release directory
 and zip next to the checkout. `external/README.md` covers the per-runtime dependencies.
 
-### Files this checkout is missing
+    python LastSeed_BuildRelease.py
 
-`CampfireArchiveManifest.txt` lists 14 files that are not here, so `Campfire_BuildRelease.py`
-stops before packing on either runtime. `.gitignore` already whitelists all of them, so
-they are tracked as soon as they are dropped in. Run `_Camp_ManifestCheck.bat` for the
-current list.
+Last Seed builds the same way. It has no installer and no SkyUI add-on; the release is the
+plugin, the BSA, the `LastSeedData` placeholder and the readmes.
+
+`_Camp_ManifestCheck.bat`, `_Frost_ManifestCheck.bat` and `_Seed_ManifestCheck.bat` cross-check
+each manifest against the checkout. All three find every file they list. The warnings they
+still print are files in the checkout that no manifest ships — the `_Camp_FSBackpack*`
+textures, the `_Frost_*_test` scripts and similar — and predate this work.
+
+### Third-party scripts in this checkout
 
 | Files | Source |
 | --- | --- |
-| `Scripts/CommonArrayHelper.pex`, `CommonHelperFunctions.pex`, `CommonMeterInterfaceHandler.pex`, `Common_SKI_MeterWidget.pex`, `FallbackEventEmitter.pex`, `FallbackEventHandler.pex`, `FallbackEventReceiverActiveMagicEffect.pex`, `FallbackEventReceiverAlias.pex`, `FallbackEventReceiverForm.pex` | [CheskoPapyrusShared](https://github.com/chesko256/CheskoPapyrusShared) (MIT). That repository ships compiled `.pex` for six of the nine; `CommonHelperFunctions`, `CommonMeterInterfaceHandler` and `Common_SKI_MeterWidget` are source only and have to be compiled. |
-| `Scripts/C00JorrvaskrFightAthisScript.pex`, `C00JorrvaskrFightNjadaScript.pex` and their `.psc` | The Brawl Bug Patch set, the rest of which is already here. |
-| `meshes/mps/mpsguideparticles.nif` | Ships in the Campfire BSA; not committed. |
+| `Scripts/Source/CommonArrayHelper.psc`, `CommonHelperFunctions.psc`, `CommonMeterInterfaceHandler.psc`, `Common_SKI_MeterWidget.psc`, `FallbackEvent*.psc` and their `.pex` | [CheskoPapyrusShared](https://github.com/chesko256/CheskoPapyrusShared) (MIT), compiled here with `pscompile.py`. `CommonArrayHelper.psc` carries one addition over upstream: Armor-typed `LinkedArrayAddArmor` / `LinkedArrayRemoveArmor` / `LinkedArrayHasArmor` / `LinkedArraySortArmor`. Papyrus arrays are not covariant, `_Frost_LegacyArmorDatastore` keeps its Frostfall 3.0 data in `Armor[]` quartets, and the Frostfall 3.4 release bytecode already calls these by name — the upstream repository only ever published the `Form[]` versions. |
+| `Scripts/Source/C00JorrvaskrFightAthisScript.psc`, `C00JorrvaskrFightNjadaScript.psc` | Enai Siaion's Brawl Bugs Patch versions, the same edit as the other `C00*` scripts here: `OnHit` only ends the brawl for a weapon, hostile spell or scroll. Requiem ships the identical files. |
+| `external/headers/ddUnequip*.psc` | Compile-only stubs for the two Equipping Overhaul scripts `_Camp_TentSystem.EO_TurnOff()` binds to. Equipping Overhaul is not redistributable; the stubs declare exactly the members Campfire reads, with the types `_Camp_TentSystem.pex` was compiled against, and are never shipped. |
 
-`Frostfall_BuildRelease.py` is not blocked — `_Frost_ManifestCheck.bat` passes.
+`CampfireArchiveManifest.txt` no longer lists `meshes/mps/mpsguideparticles.nif`. Nothing
+references it — no record in `Campfire.esm`, no script, no mesh — and it was never committed.
+
+### Compiling scripts
+
+`Scripts/*.pex` is what the game runs, and it has to be rebuilt whenever `Scripts/Source/*.psc`
+changes. `pscompile.py` does that with the Special Edition toolchain:
+
+    python pscompile.py --check            # which .psc are newer than their .pex
+    python pscompile.py --stale            # rebuild those
+    python pscompile.py _Frost_ClimateSystem _Camp_Compatibility
+
+One `.pex` serves both runtimes — the bytecode format did not change between Legendary and
+Special Edition, and the scripts guard every SKSE64-only call behind the runtime detection in
+the `*_Compatibility` scripts — so the compiler is pointed at the Special Edition headers. It
+finds them in the reference checkouts next to this one: `skse64` (the `vanilla` + `modified`
+fragments are merged on every run, the way `skse64/scripts/build.py` does it), `Lilac`, and
+`SkyUI-Community` (the SkyUI 5.1 SDK in `skyui/` predates `AddInputOption`, which the config
+panels use). PapyrusUtil SE's headers come from `external/SkyrimSE/Scripts/Source`, which has to
+win over the Legendary Edition copies in `Scripts/Source` — the compiler resolves referenced
+scripts from its working directory before the import list, so `pscompile.py` never runs from
+`Scripts/Source`. Paths are overridable through `SKYRIMSE_PATH`, `SKSE64_SCRIPTS`,
+`SKYUI_SCRIPTS` and `LILAC_SCRIPTS`.
+
+`--check` judges staleness by git commit time, so it survives a fresh clone. One source is
+listed as known not to compile: `_Frost_HarvestTreeBranchGenerator.psc` casts to a
+`_Camp_BranchTreeHarvestNodeController` that exists in neither Campfire nor Frostfall. Frostfall
+ships it, but the committed `.pex` carries the same cast, so rebuilding would change nothing;
+it is a Frostfall 3.x issue that predates the Special Edition work and is left alone.
+
+The decompiled output of a rebuilt script differs from Chesko's committed bytecode only where
+the source changed — `_Frost_ClimateSystem` by the `ws == Tamriel` guard that was in the source
+but never in the `.pex`, `_Camp_ConditionValues` by the `IsSpecialEdition` property — which is
+the check that the header set above is the right one.
 
 ## Special Edition
 
@@ -100,5 +138,35 @@ Not covered by any of this, and still worth doing before a Special Edition relea
 - `Scripts/Source/_DE_*.psc` are the Frostfall 2.x scripts. They are still compiled into
   `Scripts/` but appear in no archive manifest, so nothing ships them; their SKSE and
   SkyUI detection is Legendary Edition only and was left alone.
-- Last Seed has no archive manifest, no release builder and no readmes, so it cannot be
-  packaged from this repository yet.
+- `0x00000BD7` for `SkyrimVR.esm` in the three `DetectGameRuntime` functions is still
+  unverified; there is no Skyrim VR install here to read it from.
+
+### Last Seed
+
+Last Seed is the 2017 Prologue (0.1) plus the Special Edition work above, and can now be
+packaged: `LastSeedArchiveManifest.txt`, `LastSeedArchiveBuilder.txt`,
+`LastSeed_BuildRelease.py`, `_Seed_ManifestCheck.bat`, the three `readmes/LastSeed_*.txt` and
+the `SKSE/Plugins/LastSeedData` placeholder are all new. So is
+`Interface/Translations/lastseed_english.txt`: the MCM has always used `$LastSeed...` keys and
+no translation file was ever committed, so every page showed raw keys. The 86 English strings
+follow the Frostfall and Campfire files where the option is the same (profiles, meters) and
+describe the option from the script where it is not.
+
+Last Seed 0.2 also gains eating and drinking animations (`_Seed_PlayerEatMonitor.psc`) and a
+working Effects & Notifications MCM page. They use four vanilla idle records —
+`IdleEatingStandingStart`, `IdleDrinkingStandingStart`, `ChairEatingStart`, `ChairDrinkingStart`,
+ended with `IdleStop_Loose` — which is exactly what iNeed does, without FNIS or any behaviour
+file, wrapped in Frostfall's hand-warming conventions (third person while it plays, retry on
+`PlayIdle`, followers through `CampUtil.GetTrackedFollower`). iNeed's own sounds were not
+copied: the folder carries no licence. The two settings behind it, `_Seed_Setting_Animation`
+and `_Seed_Setting_FollowerAnimation`, were added to `LastSeed.esp` with `pluginglob.py`
+(clones an existing GLOB under a new EditorID and FormID; `plugindiff.py` confirms nothing else
+changed) and are looked up by FormID from the scripts, so no Creation Kit pass was needed to
+bind properties. `LastSeed.esp.before-pluginglob` is the pre-edit plugin and can be deleted
+once the resave is done.
+
+The manifest ships the 42 `_Seed*`/`SeedUtil`/`LastSeedAPI`/`QF__Seed_*` scripts that
+`LastSeed.esp` and each other reference. Three sources with no `.pex` — `_Seed_ConsumableDatastore`,
+`_Seed_SKI_StatusWidget`, `_Seed_SpoilSystem_old` — are referenced by nothing and are not shipped;
+neither is `meshes/lastseed/_Seed_PerishedFood01_SE.nif`, a hand-converted copy of the mesh
+the build converts anyway.

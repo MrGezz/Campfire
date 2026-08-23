@@ -19,6 +19,8 @@ Change Log
 - **(Special Edition)** Fixed light (ESL-flagged) plugins being reported as not loaded during compatibility checks.
 - Fixed Campfire continuing to believe SKSE was present after SKSE was uninstalled between saves.
 - Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be resolved.
+- The compiled scripts now match their sources again. The Special Edition runtime detection, the light plugin fix and the SkyUI SE lookups shipped as source only; the scripts Campfire's data store and events depend on (CheskoPapyrusShared) and the Jorrvaskr brawl scripts from the Brawl Bugs Patch were missing from the release entirely.
+- Campfire now bundles PapyrusUtil 4.7 on Special Edition, built for Skyrim SE 1.7.99 and SKSE64 2.3.0. If you already run a newer PapyrusUtil, do not let Campfire overwrite it.
 
 
 

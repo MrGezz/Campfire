@@ -1,0 +1,2 @@
+@ECHO OFF
+python manifestcheck.py LastSeedArchiveManifest.txt LastSeed _Test _Camp Camp camp _Frost Frost frost SKI ski skyui _DE _de _HN ddUnequip qf__de BladesSparringScript C00 CompanionsSingleCombatantScript DGIntimidateAliasScript DGIntimidatePlayerScript MS11CalixtoScript JsonUtil StorageUtil TentSystem ActorUtil ObjectUtil PapyrusUtil MiscUtil Lilac Common Fallback _Seed_ConsumableDatastore _Seed_SKI_StatusWidget _Seed_SpoilSystem_old Campfire Frostfall CampDevKit_readme FrostDevKit_readme Conquest_readme _Seed_PerishedFood01_SE

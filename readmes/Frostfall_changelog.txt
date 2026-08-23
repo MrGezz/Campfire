@@ -28,6 +28,8 @@ Frostfall 3.5 Change Log
 - (Special Edition) Fixed warmth and coverage data for armor from light (ESL-flagged) plugins. Every light plugin shares mod index 0xFE, so all such armor was stored under a key with no plugin name and a form ID that still contained the light plugin index. Editing your load order changed the key, losing your customisations; two armors in different light plugins could also end up sharing one key and overwriting each other. Armor from light plugins is now keyed on the plugin's file name and the form index it actually owns.
   - Any protection values you had customised for armor from a light plugin will need to be set once more. Armor from ordinary plugins, and the values Frostfall ships, are unaffected.
 - Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be resolved.
+- The compiled scripts now match their sources again. The Special Edition fixes above shipped as source only, and the region check that stops the Throat of the World temperature being applied outside Tamriel (from Frostfall 3.4.1) was in the source but never in the compiled script.
+- Armor from the Frostfall 3.0 - 3.2 data store can be read again: the array helpers it uses for Armor lists (LinkedArrayAddArmor, LinkedArrayRemoveArmor, LinkedArrayHasArmor) are now part of the CommonArrayHelper script Campfire ships.
 
 ===========================================
 Frostfall 3.4.1 Change Log

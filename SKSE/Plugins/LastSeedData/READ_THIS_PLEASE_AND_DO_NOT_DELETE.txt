@@ -1,0 +1,6 @@
+Last Seed Data Files
+====================
+
+The purpose of the files in Skyrim/Data/SKSE/Plugins/LastSeedData are to store Last Seed's Settings Profile data. These files are created and are required in order for Last Seed to run.
+
+Please DO NOT delete the files created in this directory, or all of your mod settings for Last Seed will be reset.

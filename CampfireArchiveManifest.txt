@@ -11,7 +11,8 @@ Interface\Translations\campfire_japanese.txt
 Interface\Translations\campfire_polish.txt
 Interface\Translations\campfire_russian.txt
 Interface\Translations\campfire_spanish.txt
-meshes\mps\mpsguideparticles.nif
+# meshes\mps\mpsguideparticles.nif was listed here but is referenced by nothing - no record in
+# Campfire.esm, no script, no mesh - was never committed, and is not in meshes\. Dropped.
 meshes\campfire\_Campfire_VisionDetectionMote.nif
 meshes\campfire\_Campfire_VisionDetectionMoteMisc.nif
 meshes\campfire\_Camp_1stPersonStoneWarAxe.nif

@@ -24,26 +24,38 @@ The SKSE plugin is named differently per runtime, because the 64-bit release ren
 | Legendary Edition | SKSE 1.7.3+ | `external/Skyrim/SKSE/Plugins/StorageUtil.dll` |
 | Special Edition | SKSE64 2.0.20+ | `external/SkyrimSE/SKSE/Plugins/PapyrusUtil.dll` |
 
-## Missing binary
+## The Special Edition set is PapyrusUtil 4.7 (our 1.7.99 build)
 
-`external/SkyrimSE/SKSE/Plugins/PapyrusUtil.dll` is **not** currently in the repository.
-Until it is added, `Campfire_BuildRelease.py` stops with a message naming the missing
-file when building for Special Edition. Drop the `PapyrusUtil.dll` from a PapyrusUtil SE
-release into that path to unblock an SE build; `.gitignore` now whitelists the name so it
-can be committed alongside the Legendary Edition `StorageUtil.dll`.
+`external/SkyrimSE/` holds `PapyrusUtil.dll` **4.7**, built 2026-08-23 from
+`..\..\PapyrusUtil` (eeveelo's fork of Ashal's source, patched for 1.7.99: format-5 Address
+Library reader, `compatibleVersions = { 1.7.99 }`, skse64 2.3.0 — see that README for the
+recipe), plus `JsonUtil.pex`, `StorageUtil.pex` and the matching `.psc` sources, which are
+unchanged since 4.6 (the script API did not move between 4.5, 4.6 and 4.7; only
+`PapyrusUtil.GetVersion()` returns 47 now).
 
-Frostfall does not ship PapyrusUtil of its own — it relies on the copy Campfire installs,
-and only needs the matching `Archive.exe` to pack its BSA.
+PapyrusUtil's DLL is built against one game executable. 4.7 is for **Skyrim SE 1.7.99 with
+SKSE64 2.3.0** and the official `versionlib-1-7-99-0.bin`; SKSE refuses it on anything else.
+It was verified loading on 1.7.99 (`PapyrusUtilDev.log`: "Loaded database for SkyrimSE.exe
+version 1.7.99.0", hooks and functions registered, main menu reached) but not yet exercised
+through Campfire's MCM or a save/load cycle — do that before a release. The previous 4.6 DLL
+(Nexus, 18 January 2024, pinned to 1.6.1170) is gone from this folder; players still on
+1.6.1170 take 4.6 from Nexus, players on 1.5.97 need 3.9 — nothing in the scripts changes.
+The DLL shipped inside a Campfire release is the one thing in it that goes stale with game
+patches, and PapyrusUtil's own page warns players not to let Campfire overwrite a newer install.
 
-## Stale Special Edition sources
+`external/SkyrimSE/Scripts/Source/` also carries `MiscUtil.psc`, `PapyrusUtil.psc`,
+`ActorUtil.psc` and `ObjectUtil.psc` from the same release. They are headers for
+`pscompile.py` — `JsonUtil.psc` calls `MiscUtil.FileExists`, so the compiler needs it — and are
+not in any manifest, so the release still ships only the two scripts Campfire has always
+shipped.
 
-`external/SkyrimSE/Scripts/JsonUtil.pex` and `StorageUtil.pex` differ from their Legendary
-Edition counterparts, so those are genuine 64-bit builds. The `.psc` files next to them do
-not: `external/SkyrimSE/Scripts/Source/JsonUtil.psc` and `StorageUtil.psc` are byte for
-byte identical to `external/Skyrim/Scripts/Source/`, i.e. the Legendary Edition sources
-were copied across rather than taken from the PapyrusUtil SE release.
+Frostfall and Last Seed do not ship PapyrusUtil of their own — they rely on the copy Campfire
+installs, and only need the matching `Archive.exe` to pack their BSAs.
 
-The `.pex` files are what the game runs, so this does not change behaviour, but anything
-compiled against these headers is compiled against the wrong ones. Replace both `.psc`
-files from the PapyrusUtil SE release at the same time as adding `PapyrusUtil.dll`, and
-check whether that release ships script headers this set does not have.
+## Compile-only stubs
+
+`external/headers/` holds stub `.psc` headers for third-party scripts that Campfire's
+compatibility code binds to but which cannot be redistributed — currently the two Equipping
+Overhaul scripts `_Camp_TentSystem.EO_TurnOff()` reads. Each declares only the members
+Campfire uses, with the types the committed `_Camp_TentSystem.pex` was compiled against. They
+are on `pscompile.py`'s import path and are never shipped.

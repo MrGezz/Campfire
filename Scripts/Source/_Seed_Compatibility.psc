@@ -92,16 +92,16 @@ function RunCompatibility()
 	int skse_major = SKSE.GetVersion()
 	DetectGameRuntime(skse_major)
 
-	int skse_min_version = GetRequiredSKSEVersion()
+	int required_skse_version = GetRequiredSKSEVersion()
 	string skse_name = GetSKSEName()
 	if skse_major
 		int skse_version = (skse_major * 10000) + (SKSE.GetVersionMinor() * 100) + SKSE.GetVersionBeta()
-		if skse_version < skse_min_version
+		if skse_version < required_skse_version
 			isSKSELoaded = false
 			ErrorSKSE(skse_version)
 		else
 			isSKSELoaded = true
-			trace("[LastSeed] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + " (expected " + FormatSKSEVersion(skse_min_version) + " or newer, success!)")
+			trace("[LastSeed] Detected " + skse_name + " version " + FormatSKSEVersion(skse_version) + " (expected " + FormatSKSEVersion(required_skse_version) + " or newer, success!)")
 		endif
 	else
 		isSKSELoaded = false

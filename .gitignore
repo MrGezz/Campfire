@@ -15,6 +15,7 @@
 !Frostfall_BuildRelease.py
 !CampDevKit_BuildRelease.py
 !FrostDevKit_BuildRelease.py
+!LastSeed_BuildRelease.py
 !buildcommon.py
 !Archive.exe
 !CampfireArchiveBuilder.txt
@@ -24,11 +25,15 @@
 !FrostfallArchiveManifest.txt
 !CampDevKitArchiveManifest.txt
 !FrostDevKitArchiveManifest.txt
+!LastSeedArchiveBuilder.txt
+!LastSeedArchiveManifest.txt
 
 #Special Edition asset validation
 !ssecheck.py
 !plugindiff.py
 !ckstage.py
+!pscompile.py
+!pluginglob.py
 
 #Manifest Validation
 !manifestcheck.py
@@ -180,6 +185,14 @@
 !StorageUtil.psc
 !JsonUtil.pex
 !JsonUtil.psc
+#PapyrusUtil SE headers the compiler needs but the release does not ship
+!MiscUtil.psc
+!PapyrusUtil.psc
+!ActorUtil.psc
+!ObjectUtil.psc
+
+#Compile-only stub headers for third-party scripts that cannot be redistributed; see pscompile.py
+!external/headers/*
 
 #CampDevKit Files
 !CampDevKit/*

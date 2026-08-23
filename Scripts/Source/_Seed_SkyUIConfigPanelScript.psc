@@ -199,7 +199,42 @@ function PageReset_Gameplay()
 endFunction
 
 function PageReset_Interface()
-	AddTextOption("Coming soon.", "", OPTION_FLAG_DISABLED)
+	SetCursorFillMode(TOP_TO_BOTTOM)
+	if LastSeedRunning.GetValueInt() != 2 || must_exit
+		AddTextOption("$LastSeedNotRunningError", "", OPTION_FLAG_DISABLED)
+		return
+	endif
+
+	AddHeaderOption("$LastSeedInterfaceHeaderEffects")
+	Interface_SoundEffects_OID = AddToggleOption("$LastSeedInterfaceSettingSoundEffects", _Seed_Setting_NeedsSFX.GetValueInt() == 2)
+	Interface_FullScreenEffects_OID = AddToggleOption("$LastSeedInterfaceSettingFullScreenEffects", _Seed_Setting_NeedsVFX.GetValueInt() == 2)
+	Interface_ForceFeedback_OID = AddToggleOption("$LastSeedInterfaceSettingForceFeedback", _Seed_Setting_NeedsForceFeedback.GetValueInt() == 2)
+	Interface_ConditionMessages_OID = AddToggleOption("$LastSeedInterfaceSettingConditionMessages", _Seed_Setting_Notifications.GetValueInt() == 2)
+
+	AddEmptyOption()
+	AddHeaderOption("$LastSeedInterfaceHeaderAnimations")
+	ResolveAnimationSettings()
+	if _Seed_Setting_Animation
+		Interface_Animation_OID = AddToggleOption("$LastSeedInterfaceSettingAnimation", _Seed_Setting_Animation.GetValueInt() == 2)
+	endif
+	if _Seed_Setting_FollowerAnimation
+		Interface_FollowerAnimation_OID = AddToggleOption("$LastSeedInterfaceSettingFollowerAnimation", _Seed_Setting_FollowerAnimation.GetValueInt() == 2)
+	endif
+endFunction
+
+; The two animation globals were added to LastSeed.esp in 0.2; they are looked up rather than
+; bound as properties so that this script needs no Creation Kit pass. Same IDs as in
+; _Seed_PlayerEatMonitor.
+GlobalVariable _Seed_Setting_Animation
+GlobalVariable _Seed_Setting_FollowerAnimation
+
+function ResolveAnimationSettings()
+	if !_Seed_Setting_Animation
+		_Seed_Setting_Animation = Game.GetFormFromFile(0x0001082E, "LastSeed.esp") as GlobalVariable
+	endif
+	if !_Seed_Setting_FollowerAnimation
+		_Seed_Setting_FollowerAnimation = Game.GetFormFromFile(0x0001082F, "LastSeed.esp") as GlobalVariable
+	endif
 endFunction
 
 function PageReset_Meters()
@@ -383,7 +418,9 @@ event OnOptionHighlight(int option)
 endEvent
 
 event OnOptionSelect(int option)
-	if Gameplay_FocusEnabled_OID
+	; These compared the option IDs to nothing ("if Gameplay_FocusEnabled_OID"), so every
+	; click landed on the first branch with a non-zero ID.
+	if option == Gameplay_FocusEnabled_OID
 		if _Seed_Setting_Focus.GetValueInt() == 2
 			_Seed_Setting_Focus.SetValueInt(1)
 			_Seed_IsPlayerFocused.SetValueInt(1)
@@ -393,9 +430,21 @@ event OnOptionSelect(int option)
 			SetToggleOptionValue(Gameplay_FocusEnabled_OID, true)
 		endif
 		SaveSettingToCurrentProfile("focus_enabled", _Seed_Setting_Focus.GetValueInt())
-	elseif Gameplay_HungerEnabled_OID
+	elseif option == Gameplay_HungerEnabled_OID
 		; also toggle system on / off
 		OnOptionSelectAction(_Seed_Setting_SystemEnabled_Hunger, Gameplay_HungerEnabled_OID, "hunger_enabled")
+	elseif option == Interface_SoundEffects_OID
+		OnOptionSelectAction(_Seed_Setting_NeedsSFX, Interface_SoundEffects_OID, "sound_effects")
+	elseif option == Interface_FullScreenEffects_OID
+		OnOptionSelectAction(_Seed_Setting_NeedsVFX, Interface_FullScreenEffects_OID, "full_screen_effects")
+	elseif option == Interface_ForceFeedback_OID
+		OnOptionSelectAction(_Seed_Setting_NeedsForceFeedback, Interface_ForceFeedback_OID, "force_feedback")
+	elseif option == Interface_ConditionMessages_OID
+		OnOptionSelectAction(_Seed_Setting_Notifications, Interface_ConditionMessages_OID, "condition_messages")
+	elseif option == Interface_Animation_OID && _Seed_Setting_Animation
+		OnOptionSelectAction(_Seed_Setting_Animation, Interface_Animation_OID, "animation")
+	elseif option == Interface_FollowerAnimation_OID && _Seed_Setting_FollowerAnimation
+		OnOptionSelectAction(_Seed_Setting_FollowerAnimation, Interface_FollowerAnimation_OID, "follower_animation")
 	endif
 endEvent
 
