@@ -26,7 +26,7 @@ The SKSE plugin is named differently per runtime, because the 64-bit release ren
 
 ## The Special Edition set is PapyrusUtil 4.7 (our 1.7.99 build)
 
-`external/SkyrimSE/` holds `PapyrusUtil.dll` **4.7**, built 2026-08-23 from
+`external/SkyrimSE/` holds `PapyrusUtil.dll` **4.7**, built 2026-09-03 (copied here 2026-09-05 from `PapyrusUtil\bin\x64\Release`, byte-identical to the deployed `PapyrusUtil 4.7` MO2 mod; the release DLL is a convenience copy, the MO2 mod is the one the game loads) from
 `..\..\PapyrusUtil` (eeveelo's fork of Ashal's source, patched for 1.7.99: format-5 Address
 Library reader, `compatibleVersions = { 1.7.99 }`, skse64 2.3.0 — see that README for the
 recipe), plus `JsonUtil.pex`, `StorageUtil.pex` and the matching `.psc` sources, which are

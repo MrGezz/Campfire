@@ -6,7 +6,9 @@ conversions that have to happen outside this repository are easy to forget:
 
   * Plugins have to be resaved in the Special Edition Creation Kit. That rewrites the
     TES4 header version from 1.7 to 1.71 and the record form version from 0 to 43/44, and
-    - the reason it matters - it rewrites NAVI/NAVM navmesh data into the Special Edition
+    - (corrected 2026-09-05: header/form version are NOT LE markers; the check now reads
+      the NAVM NVNM version, which is 12 in vanilla SSE and in these plugins already)
+    - the reason it was believed to matter - rewriting NAVI/NAVM navmesh data into the SE
     layout. Campfire.esm and Frostfall.esp both carry a NAVI group.
   * Meshes have to be converted to the Special Edition NIF format. Special Edition NIFs
     are BSTriShape based and carry NIF user version 2 = 100; Legendary Edition NIFs carry
@@ -31,14 +33,23 @@ import zlib
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# TES4 HEDR version and record form version. The Legendary Edition Creation Kit writes
-# 1.70 / 43, the Special Edition Creation Kit writes 1.71 / 44. HEDR is compared with a
-# tolerance because it is stored as a 32-bit float.
+# TES4 HEDR version and record form version are INFORMATIONAL ONLY. They are not LE/SSE
+# markers: measured 2026-09-05, Bethesda's own Dragonborn.esm is 169,776 form-43 records
+# to 8,939 form-44, and the Creation Club plugin ccQDRSSE001-SurvivalMode.esl ships HEDR
+# 1.70. The Special Edition Creation Kit writes 1.71 / 44, but a plugin that says 1.70 / 43
+# is not thereby broken. The one plugin-level thing that can differ between the editions is
+# navmesh, which is why the check below reads the NVNM version instead.
 LE_HEADER_VERSION = 1.70
 LE_FORM_VERSION = 43
 SE_HEADER_VERSION = 1.71
 SE_FORM_VERSION = 44
 HEADER_VERSION_TOLERANCE = 0.001
+
+# NAVM records carry an NVNM subrecord whose first uint32 is a version. Vanilla Special
+# Edition Skyrim.esm / Dawnguard.esm / Dragonborn.esm all write 12, and so does every
+# navmesh-carrying plugin in the working D:\Mosais build (BSHeartland, LotD, Requiem ...).
+# A different value would be the only real reason to resave in the Creation Kit.
+SE_NVNM_VERSION = 12
 
 # How many individual mesh paths to print before collapsing the rest into a count. The
 # whole meshes/ tree is normally converted in one pass, so the full list is just noise.
@@ -230,19 +241,59 @@ def _iter_meshes():
                     yield os.path.join(dirpath, filename)
 
 
+def _nvnm_versions(raw):
+    """Counter of the NVNM version field across every NAVM record in a plugin."""
+    versions = {}
+    header = _RECORD_HEADER.unpack_from(raw, 0)
+    stack = [(_RECORD_HEADER.size + header[1], len(raw))]
+    while stack:
+        offset, end = stack.pop()
+        while offset + _RECORD_HEADER.size <= end:
+            rec = _RECORD_HEADER.unpack_from(raw, offset)
+            if rec[0] == b"GRUP":
+                size = rec[1]
+                if size < _RECORD_HEADER.size:
+                    break
+                stack.append((offset + size, end))
+                stack.append((offset + _RECORD_HEADER.size, offset + size))
+                break
+            if rec[0] == b"NAVM":
+                for signature, payload in _subrecords(_record_data(raw, offset, rec)):
+                    if signature == b"NVNM" and len(payload) >= 4:
+                        v = struct.unpack_from("<I", payload, 0)[0]
+                        versions[v] = versions.get(v, 0) + 1
+                        break
+            offset += _RECORD_HEADER.size + rec[1]
+    return versions
+
+
 def find_legendary_edition_plugins():
-    """Plugins that still carry Legendary Edition header versions."""
+    """Plugins whose navmesh is not in the Special Edition format.
+
+    Header and form version are reported but never fail the check - they are not LE
+    markers (see the note by SE_NVNM_VERSION). Only a NAVM whose NVNM version differs
+    from vanilla Special Edition's is a real reason to resave in the Creation Kit.
+    """
     stale = []
     for name in PLUGINS:
         path = os.path.join(PROJECT_DIR, name)
         if not os.path.isfile(path):
             continue
         version, form_version = read_plugin_header(path)
-        if abs(version - SE_HEADER_VERSION) > HEADER_VERSION_TOLERANCE:
+        versions = _nvnm_versions(_read(path))
+        bad = {v: n for v, n in versions.items() if v != SE_NVNM_VERSION}
+        if bad:
             stale.append(
-                "%s: TES4 header version %.2f, record form version %d "
-                "(expected %.2f / %d). Resave it in the Special Edition Creation Kit."
-                % (name, version, form_version, SE_HEADER_VERSION, SE_FORM_VERSION)
+                "%s: %d NAVM record(s) with NVNM version %s (Special Edition writes %d). "
+                "Resave it in the Special Edition Creation Kit."
+                % (name, sum(bad.values()), sorted(bad), SE_NVNM_VERSION)
+            )
+        else:
+            print(
+                "    %-14s HEDR %.2f, form %d, NAVM %d (NVNM %s) - fine; header/form "
+                "version are informational, not LE markers."
+                % (name, version, form_version, sum(versions.values()),
+                   sorted(versions) if versions else "none")
             )
     return stale
 

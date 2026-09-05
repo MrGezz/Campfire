@@ -149,6 +149,9 @@ function StartModFirstTime(bool abBypassStartupMessage = true)
 endFunction
 
 function UnregisterCampfireSkill()
+	if !SeedUtil.GetCompatibilitySystem().IsProvisioningSkillTreeImplemented()
+		return ; never registered - see _Seed_Compatibility.RegisterCampfireSkill
+	endif
 	GlobalVariable CampfireAPIVersion = Game.GetFormFromFile(0x03F1BE, "Campfire.esm") as GlobalVariable
 	if CampfireAPIVersion && CampfireAPIVersion.GetValueInt() >= 4
 		bool b = CampUtil.UnregisterPerkTree(_Seed_PerkNodeController_Provisioning, "LastSeed.esp")

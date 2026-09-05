@@ -174,12 +174,30 @@ function SendEvent_LastSeedLoaded()
 endFunction
 
 function RegisterCampfireSkill()
+	if !IsProvisioningSkillTreeImplemented()
+		debug.trace("[LastSeed] Provisioning skill tree not registered with Campfire: it is not implemented in this release (controller stub only).")
+		return
+	endif
 	GlobalVariable CampfireAPIVersion = Game.GetFormFromFile(0x03F1BE, "Campfire.esm") as GlobalVariable
 	if CampfireAPIVersion && CampfireAPIVersion.GetValueInt() >= 4
 		bool b = CampUtil.RegisterPerkTree(_Seed_PerkNodeController_Provisioning, "LastSeed.esp")
 	else
 		debug.trace("[Campfire] ERROR: Unable to register Campfire Skill System for LastSeed.esp. Campfire was not found or the version loaded is not compatible. Expected CampUtil API 4 or higher, got " + CampfireAPIVersion.GetValueInt())
 	endif
+endFunction
+
+; The provisioning skill tree is a stub in this release. LastSeed.esp carries the controller
+; activator (_Seed_PerkNodeController_Provisioning) and the two perk-point globals
+; (ProvisioningPerkPoints, ProvisioningPerkPointProgress) but no perk nodes, lines, position
+; references or skill description message, and the controller still attaches
+; _Camp_PerkNodeControllerBehavior, a Campfire-internal script name that Campfire dropped on
+; 2016-01-28 for CampPerkNodeControllerBehavior; its property values are the camping tree's,
+; under this plugin's own master index, where they do not exist. Registering it hands Campfire
+; an empty tree that fails on first use (CampCampfire.ShowPerkDesc casts the placed controller
+; and calls required_skill_description.Show on None). A function rather than a property so the
+; answer is not baked into save games. Return true once the tree exists.
+bool function IsProvisioningSkillTreeImplemented()
+	return false
 endFunction
 
 function CheckDatastore()

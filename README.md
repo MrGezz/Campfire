@@ -170,3 +170,21 @@ The manifest ships the 42 `_Seed*`/`SeedUtil`/`LastSeedAPI`/`QF__Seed_*` scripts
 `_Seed_SKI_StatusWidget`, `_Seed_SpoilSystem_old` — are referenced by nothing and are not shipped;
 neither is `meshes/lastseed/_Seed_PerishedFood01_SE.nif`, a hand-converted copy of the mesh
 the build converts anyway.
+
+The provisioning skill tree is a stub and is no longer registered with Campfire.
+`LastSeed.esp` carries the controller activator `_Seed_PerkNodeController_Provisioning`
+(`04006B0E`) and the two globals `ProvisioningPerkPoints` / `ProvisioningPerkPointProgress`,
+but no perk nodes, lines, position references or skill description message. The controller
+still attaches `_Camp_PerkNodeControllerBehavior`, the Campfire-internal script name that
+Campfire dropped on 2016-01-28 (commit `85bfbea`) for `CampPerkNodeControllerBehavior`, and
+its 27 property values are the camping tree's (`_Camp_PN_Camping_1Resourceful`,
+`CampingPerkPoints`, `_Camp_MainQuest` ...) under this plugin's own master index, where none of
+them exist. Registered, that hands Campfire an empty tree that fails the first time it is
+opened (`CampCampfire.ShowPerkDesc` casts the placed controller and calls
+`required_skill_description.Show` on None). `_Seed_Compatibility.IsProvisioningSkillTreeImplemented()`
+returns false and gates both `RegisterCampfireSkill` and `UnregisterCampfireSkill`; it is a
+function rather than a property so the answer is never baked into a save. Building the tree
+(nodes with `CampPerkNode`, lines, position references, a skill message, perks, and the
+controller re-pointed at `CampPerkNodeControllerBehavior` with `PerkNode00`-style names) is
+Last Seed completion work. Art of the Catch carries the same kind of stub, but nothing
+references it, so it stays inert; see `ArtOfTheCatch/Scripts/README.md`.

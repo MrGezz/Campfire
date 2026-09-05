@@ -91,11 +91,16 @@ translations = (
     "czech", "english", "french", "german", "italian",
     "japanese", "polish", "russian", "spanish",
 )
+# Legendary Edition only. The addon overrides SkyUI's own skyui_<lang>.txt; SkyUI SE ships
+# skyui_se_<lang>.txt instead and loads each mod's frostfall_<lang>.txt on its own, so the
+# SE build has nothing to override and the repository carries no skyui_*.txt. Warn, do not
+# stop - measured 2026-09-05 when the SE build aborted here on skyui_czech.txt.
 for language in translations:
     name = "skyui_" + language + ".txt"
-    copy_file(
+    copy_optional_file(
         project_path("Interface", "Translations", name),
         os.path.join(addon, "Interface", "Translations", name),
+        "SkyUI translation addon (Legendary Edition only)",
     )
 
 # Copy files - Installer

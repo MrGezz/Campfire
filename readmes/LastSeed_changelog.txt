@@ -33,6 +33,9 @@ Last Seed 0.2 Change Log
   the release is built.
 - Fixed a crash in the Mod Configuration Menu's Save/Load page if SkyUI could not be
   resolved.
+- The provisioning skill tree is no longer registered with Campfire. It was a stub - a
+  controller with no perk nodes, attaching a script name Campfire stopped shipping in
+  2016 - and opening it from a campfire failed. It returns when the tree is built.
 
 ===========================================
 Last Seed 0.1 Change Log
