@@ -17,6 +17,7 @@ from buildcommon import (
     reset_directory,
     run_archiver,
     stamp_runtime_plugin,
+    resave_form44,
 )
 
 print(" ")
@@ -65,6 +66,7 @@ run_archiver(tempdir, "CampfireArchiveBuilder.txt", "CampfireArchiveLog.txt")
 esm = os.path.join(dirname, "Campfire.esm")
 copy_file(project_path("Campfire.esm"), esm)
 stamp_runtime_plugin(game, esm)
+resave_form44(game, esm)
 copy_file(os.path.join(tempdir, "Campfire.bsa"), os.path.join(dirname, "Campfire.bsa"))
 copy_file(
     project_path("SKSE", "Plugins", "CampfireData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),

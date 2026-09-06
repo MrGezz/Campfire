@@ -155,6 +155,80 @@ def stamp_runtime_plugin(game, path):
     )
 
 
+def resave_form44(game, path):
+    """Stamp a staged Special Edition plugin to record form version 44, and prove it.
+
+    Skyrim SE plugins are form 44. A Legendary Edition build is form 43 and must stay that
+    way, so this is SE-only.
+
+    This exists because the form-44 pass used to be a MANUAL step run against the deployed
+    copies: on 2026-09-04 all 24 plugins in the build were stamped, and the 09-05 rebuild
+    silently put Campfire, Frostfall and Last Seed back to form 43, because nothing in the
+    build did it. MO2 then reported them as unconverted Legendary Edition plugins. Doing it
+    here means a rebuild can no longer undo it.
+
+    Form 43 -> 44 is a real layout change, not a label: WEAP CRDT is 16 bytes in LE and 24
+    in SSE, so a header bump alone leaves a form-44 record carrying a form-43 field. That is
+    why this re-serialises every record through Mutagen's SE definitions rather than editing
+    the header, and why it then PROVES the result holds the same records with the same
+    subrecord values before letting the build continue.
+
+    Mutagen rewrites a few fields we do not want changed - a recomputed DIAL TIFC is the one
+    that bites here - so a failed comparison is repaired by resavefix and re-checked, and the
+    build stops if it still does not match.
+    """
+    if game != "SE":
+        return
+
+    import subprocess
+
+    repo = os.path.join(BUILD_ROOT, "RequiemLotDPatch")
+    resave = os.path.join(repo, "resave", "bin", "Debug", "net9.0", "resave.exe")
+    tools = os.path.join(repo, "tools")
+    fixer, checker = os.path.join(tools, "resavefix.py"), os.path.join(tools, "plugineq.py")
+
+    for needed in (resave, fixer, checker):
+        if not os.path.isfile(needed):
+            fail(
+                "%s is missing, so the form-44 pass cannot run and the release would ship a "
+                "form-43 plugin. Build it with: dotnet build %s"
+                % (needed, os.path.join(repo, "resave", "resave.csproj"))
+            )
+
+    name = os.path.basename(path)
+    backup = path + ".bak43"
+
+    def run(*cmd):
+        return subprocess.run(cmd, capture_output=True, text=True)
+
+    if run(resave, "--in-place", path).returncode != 0:
+        fail("resave failed on %s." % name)
+
+    check = run(sys.executable, checker, backup, path)
+    if check.returncode != 0:
+        repaired = path + ".fixed"
+        if run(sys.executable, fixer, backup, path, repaired).returncode != 0:
+            fail("resavefix failed on %s.\n%s" % (name, check.stdout))
+        shutil.move(repaired, path)
+        check = run(sys.executable, checker, backup, path)
+        if check.returncode != 0:
+            fail(
+                "%s is not equivalent to the original after the form-44 pass. The release "
+                "was NOT built.\n%s" % (name, check.stdout)
+            )
+        print("Repaired the fields Mutagen rewrote in %s." % name)
+
+    # The backup lives in the staging directory and would otherwise ship inside the release.
+    os.remove(backup)
+
+    with open(path, "rb") as handle:
+        handle.seek(20)
+        version = int.from_bytes(handle.read(2), "little")
+    if version != 44:
+        fail("%s is form %d after the resave, expected 44." % (name, version))
+    print("Stamped %s to record form version 44 (verified equivalent)." % name)
+
+
 def require_skse_plugin(game):
     """The path to the SKSE plugin this runtime ships, or a readable failure.
 

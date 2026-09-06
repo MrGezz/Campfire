@@ -10,6 +10,7 @@ from buildcommon import (
     externals_path,
     make_release_zip,
     optimize_staged_meshes,
+    resave_form44,
     project_path,
     prompt_game,
     prompt_version,
@@ -60,7 +61,9 @@ copy_file(project_path("FrostfallArchiveManifest.txt"), os.path.join(tempdir, "F
 run_archiver(tempdir, "FrostfallArchiveBuilder.txt", "FrostfallArchiveLog.txt")
 
 # Copy files - Mod
-copy_file(project_path("Frostfall.esp"), os.path.join(dirname, "Frostfall", "Frostfall.esp"))
+frostfall_esp = os.path.join(dirname, "Frostfall", "Frostfall.esp")
+copy_file(project_path("Frostfall.esp"), frostfall_esp)
+resave_form44(game, frostfall_esp)
 copy_file(os.path.join(tempdir, "Frostfall.bsa"), os.path.join(dirname, "Frostfall", "Frostfall.bsa"))
 copy_file(
     project_path("SKSE", "Plugins", "FrostfallData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),

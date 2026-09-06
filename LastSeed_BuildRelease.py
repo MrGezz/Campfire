@@ -9,6 +9,7 @@ from buildcommon import (
     externals_path,
     make_release_zip,
     optimize_staged_meshes,
+    resave_form44,
     project_path,
     prompt_game,
     prompt_version,
@@ -53,7 +54,9 @@ copy_file(project_path("LastSeedArchiveManifest.txt"), os.path.join(tempdir, "La
 run_archiver(tempdir, "LastSeedArchiveBuilder.txt", "LastSeedArchiveLog.txt")
 
 # Copy files - Mod
-copy_file(project_path("LastSeed.esp"), os.path.join(dirname, "LastSeed.esp"))
+lastseed_esp = os.path.join(dirname, "LastSeed.esp")
+copy_file(project_path("LastSeed.esp"), lastseed_esp)
+resave_form44(game, lastseed_esp)
 copy_file(os.path.join(tempdir, "LastSeed.bsa"), os.path.join(dirname, "LastSeed.bsa"))
 copy_file(
     project_path("SKSE", "Plugins", "LastSeedData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),
