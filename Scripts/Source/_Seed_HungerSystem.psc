@@ -1,18 +1,8 @@
 scriptname _Seed_HungerSystem extends _Seed_AttributeSystem
-;/
-    Things that affect hunger:
-        Time
-        Power Attacks
-        Blocks
-
-    Vampire Behavior:
-        Mortal: As normal.
-        Supernatural: Immune.
-        Immune: Immune.
-/;
 
 import CampUtil 
 import _SeedInternal
+import SeedUtil
 
 Spell property HungerSpell1 auto
 Spell property HungerSpell2 auto
@@ -38,10 +28,17 @@ ImageSpaceModifier property HungerISM6 auto
 
 Quest property _Seed_HungerMeterQuest auto
 
-FormList property _Seed_RecentlyEatenFood auto
+FormList property recentlyEatenFood auto
+FormList property AutoEatenFood auto
 
 float REGEN_HUNGER_RATE = 0.50
 float lastHealth = 0.0
+
+GlobalVariable property _Seed_Setting_AutoConsume auto
+GlobalVariable property _Seed_Setting_Notifications_Followers auto
+GlobalVariable property _Seed_Setting_HungerMeterDisplayMode auto
+GlobalVariable property _Seed_Setting_NeedsAffectedByRegeneration auto
+GlobalVariable property _Seed_DiseaseNeedsMulti_StomachRot auto
 
 function StartUp()
     debugSystemName = "Hunger"
@@ -51,7 +48,8 @@ function StartUp()
     ; Initialize arrays
     attributeSpells = new Spell[6]
     attributeMessages = new Message[6]
-    attributeSounds = new Sound[6]
+    attributeSoundsM = new Sound[6]
+    attributeSoundsF = new Sound[6]
     attributeISMs = new ImageSpaceModifier[6]
 
     ; Populate arrays
@@ -69,10 +67,16 @@ function StartUp()
     attributeMessages[4] = HungerMessage5
     attributeMessages[5] = HungerMessage6
 
-    attributeSounds[2] = HungerSound3
-    attributeSounds[3] = HungerSound4
-    attributeSounds[4] = HungerSound5
-    attributeSounds[5] = HungerSound6
+
+    attributeSoundsM[2] = HungerSound3
+    attributeSoundsM[3] = HungerSound4
+    attributeSoundsM[4] = HungerSound5
+    attributeSoundsM[5] = HungerSound6   
+	
+	attributeSoundsF[2] = HungerSound3
+    attributeSoundsF[3] = HungerSound4
+    attributeSoundsF[4] = HungerSound5
+    attributeSoundsF[5] = HungerSound6
 
     RegisterForEvents()
 
@@ -80,18 +84,44 @@ function StartUp()
     IncreaseAttribute(0.01)
 endFunction
 
+
+
 function RegisterForEvents()
     if !self.IsRunning()
         return
     endif
 endFunction
 
-function ChangeAttributeOverTime(bool suspendWhileSleeping = false)
-    parent.ChangeAttributeOverTime(suspendWhileSleeping)
+; @override
+String Function getFollowerMessage(int i)
+	return GetTranslationHandler().GetFollowerHungerMessage(i)
+endFunction
 
-    ; Every update, clear the recently eaten food list.
-    _Seed_RecentlyEatenFood.Revert()
-    SeedDebug(0, "Cleared the recently eaten food list.")
+; @override
+function ApplyAttributeLevel(int level, bool isIncreasing, bool forceMeter = false, bool flashMeter = false, int rumbleLevel = 0, bool lowerIsWorse = false, bool bypassVitalityTargetUpdate = false)	
+	; Apply Level
+	parent.ApplyAttributeLevel(level, isIncreasing, forceMeter, flashMeter, rumbleLevel, lowerIsWorse, bypassVitalityTargetUpdate)
+	
+	; AutoEat
+	if isIncreasing && level > 1
+		if(isPlayer())
+			GetConsumeManager().Player_AutoEat()
+		else
+			;GetConsumeManager().NPC_AutoEat(self)
+			GetConsumeManagerFollowers().NPC_AutoEat(followerIndex)
+		endif
+	; Increase Experience
+	elseif level == 0		
+		GetSkillTreeHandler().progressExperience()
+	endif
+endFunction
+
+function ChangeAttributeOverTime(bool suspendWhileSleeping = false, bool forceUpdate = false)
+	parent.ChangeAttributeOverTime(suspendWhileSleeping, forceUpdate)
+	
+	; Every update, clear the recently eaten food list.
+	recentlyEatenFood.Revert()
+	SeedDebug(0, "Cleared the recently eaten food list.")
 endFunction
 
 ;
@@ -100,22 +130,69 @@ endFunction
 
 ; Impact the player's hunger if the player is regenerating health.
 Event OnUpdate()
-    bool regenerating = false
-    float thisHealth = PlayerRef.GetActorValue("Health")
-    if thisHealth > lastHealth
-        regenerating = true
-    endif
-
-    if regenerating
-        if PlayerRef.IsInCombat()
-            IncreaseAttribute(REGEN_HUNGER_RATE * 0.5)
-        else
-            IncreaseAttribute(REGEN_HUNGER_RATE)
-        endif
-        SendEvent_ForceAttributeMeterDisplay()
-        RegisterForSingleUpdate(2)
-    else
-        RegisterForSingleUpdate(5)
-    endif
-    lastHealth = thisHealth
+    if self.IsRunning() && _Seed_Setting_NeedsAffectedByRegeneration.getValueInt() == 2
+		bool regenerating = false
+		float thisHealth = lastHealth
+		if getActor()
+			thisHealth = getActor().GetActorValue("Health")
+			if thisHealth > lastHealth
+				regenerating = true
+			endif
+		endif
+	
+		if regenerating
+			updateAttributeRegenerating(REGEN_HUNGER_RATE, _Seed_Setting_HungerMeterDisplayMode)
+			RegisterForSingleUpdate(2)
+		else
+			RegisterForSingleUpdate(5)
+		endif
+		lastHealth = thisHealth
+	endIf
 EndEvent
+
+function showAttributeMessage(int level)
+	if isPlayer()
+		if _Seed_Setting_Notifications.GetValueInt() == 2
+			if _Seed_Setting_AutoConsume.GetValue() == 2
+				GetConsumeManager().EnqueuePlayerHungerMessage(attributeMessages[level])
+			else
+				SeedDebug(0, "[" + debugSystemName + "]: Showing message.")
+				attributeMessages[level].Show()
+			endif
+		endif
+	elseif getFollowerMessage(level)
+		if _Seed_Setting_Notifications_Followers.GetValueInt() == 2
+			string name = "One of Your followers"
+			if GetSKSELoaded()
+				name = getActor().GetBaseObject().GetName()
+			else
+				if followerIndex == 3
+					name = "Your third follower"
+				elseif followerIndex == 2
+					name = "Your second follower"
+				elseif followerIndex == 1	
+					name = "Your first follower"
+				endif
+			endIf		
+			;Debug.Notification(name + followerMessages[level])
+			GetConsumeManagerFollowers().EnqueueFollowerHungerMessage(name + getFollowerMessage(level), followerIndex)
+		endif
+	endIf
+endFunction
+
+;@Override Function
+function enqueueSound(sound thisSound)
+	GetConsumeManager().EnqueuePlayerHungerSound(thisSound)
+endFunction
+
+;@Override Function
+float function GetAttributeMulti()
+	float result = 1
+	result = result + _Seed_DiseaseNeedsMulti_StomachRot.getValue()
+	result = result * attributeRateMultiGlobal.getValue()
+	
+	result = result * getCarriageRideMulti()
+	
+	SeedDebug(1, "[" + debugSystemName + "]: Attribute Multiplier: " + result)
+	return result
+endFunction

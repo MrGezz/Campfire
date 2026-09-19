@@ -1,0 +1,10 @@
+Scriptname _Seed_ExamineFoodPower extends activemagiceffect  
+
+ObjectReference property _Seed_CustomiseFoodContainerRef Auto
+GlobalVariable property _Seed_CustomiseFood_GettingPortions auto
+actor property PlayerRef auto
+
+Event OnEffectStart(Actor akTarget, Actor akCaster)
+	_Seed_CustomiseFood_GettingPortions.setValue(1)
+	_Seed_CustomiseFoodContainerRef.Activate(PlayerRef)
+EndEvent

@@ -64,9 +64,52 @@ PAPYRUSUTIL_SE_DIR = os.path.join(PROJECT_DIR, "external", "SkyrimSE", "Scripts"
 # Compile-time stubs for third-party scripts the compatibility code binds to (Equipping
 # Overhaul) that are not redistributable. Never shipped; see the headers themselves.
 STUB_HEADERS_DIR = os.path.join(PROJECT_DIR, "external", "headers")
+# powerofthree's Papyrus Extender (PO3_SKSEFunctions, PO3_Events_*). Last Seed 5.3 calls it when
+# the plugin is present; the checkout is the maintained build under Project Improvement, with the
+# old workspace-root location as a fallback.
+PAPYRUS_EXTENDER_SCRIPTS = os.environ.get("PAPYRUS_EXTENDER_SCRIPTS") or next(
+    (p for p in (
+        os.path.join(os.path.dirname(PROJECT_DIR), "PapyrusExtenderSSE", "Papyrus", "Source", "scripts"),
+        os.path.join(WORKSPACE_DIR, "PapyrusExtenderSSE", "Papyrus", "Source", "scripts"),
+    ) if os.path.isfile(os.path.join(p, "PO3_SKSEFunctions.psc"))),
+    os.path.join(os.path.dirname(PROJECT_DIR), "PapyrusExtenderSSE", "Papyrus", "Source", "scripts"),
+)
 MERGED_SKSE_DIR = os.path.join(PROJECT_DIR, ".papyrus", "skse64")
 
 FLAGS_FILE = "TESV_Papyrus_Flags.flg"
+
+# The Papyrus compiler stamps each .pex header with the machine it was built on, so a
+# repository of compiled scripts would publish the author's computer name once per script.
+# Nothing reads the field at runtime - it is there for the compiler and for decompilers - so
+# it is replaced with a neutral build tag as each script comes out. Only this machine's name
+# is touched; scripts inherited from other builders keep their stamp, which is the evidence of
+# which upstream build they came from. tools/pexscrub.py in RequiemLotDPatch does the same for
+# a whole tree.
+BUILD_TAG = "IcZ-BUILD"
+
+
+def scrub_machine_name(path):
+    """Replace this machine's name in a freshly compiled .pex. True when it changed."""
+    import struct
+    d = open(path, "rb").read()
+    if len(d) < 16 or struct.unpack_from(">I", d, 0)[0] != 0xFA57C0DE:
+        return False
+    o = 4 + 1 + 1 + 2 + 8
+    fields = []
+    for _ in range(3):
+        n, = struct.unpack_from(">H", d, o)
+        fields.append(d[o + 2:o + 2 + n])
+        o += 2 + n
+    here = os.environ.get("COMPUTERNAME", "")
+    if not here or fields[2].decode("cp1252", "replace").lower() != here.lower():
+        return False
+    fields[2] = BUILD_TAG.encode("cp1252")
+    head = d[:4 + 1 + 1 + 2 + 8]
+    for f in fields:
+        head += struct.pack(">H", len(f)) + f
+    open(path, "wb").write(head + d[o:])
+    return True
+
 
 # Sources that are known not to compile. --check reports them separately instead of as
 # stale, so they do not hide real drift.
@@ -74,6 +117,11 @@ KNOWN_UNBUILDABLE = {
     "_Frost_HarvestTreeBranchGenerator": "casts to a _Camp_BranchTreeHarvestNodeController that exists "
     "in neither Campfire nor Frostfall; the committed .pex carries the same cast, so rebuilding it "
     "would change nothing - a Frostfall 3.x issue that predates this repository's SE work",
+    "_Seed_SpoilSystemData": "Chesko-era dead code: it extends _Seed_SpoilSystem for members "
+    "(initialized, PerishableFoodTable_AddRow, the _Seed_SpoilRate_* globals) that the Last Seed 5.3 "
+    "spoilage rewrite absorbed into this workspace no longer has. Its own header says it was replaced "
+    "by _Seed_AliasFoodMonitor; LastSeed.esp binds it nowhere and no source references it. The 2016 "
+    "David Pierce .pex stays in LastSeed.bsa because removing it would change the archive for nothing",
     "_de_epmonitor_1_6": "Frostfall 2.x; the _DE_ scripts reference _DE_SKI_MeterWidget and other "
     "sources that are not in this checkout, ship in no manifest, and are left alone (see README)",
 }
@@ -157,6 +205,7 @@ def import_dirs():
         ("PapyrusUtil SE", PAPYRUSUTIL_SE_DIR, "StorageUtil.psc"),
         ("Lilac", LILAC_SCRIPTS, "Lilac.psc"),
         ("SkyUI", SKYUI_SCRIPTS, "SKI_ConfigBase.psc"),
+        ("Papyrus Extender", PAPYRUS_EXTENDER_SCRIPTS, "PO3_SKSEFunctions.psc"),
     ):
         if not os.path.isfile(os.path.join(path, probe)):
             fail("%s headers not found: %s is missing from %s" % (label, probe, path))
@@ -166,6 +215,7 @@ def import_dirs():
         PAPYRUSUTIL_SE_DIR,
         SOURCE_DIR,
         STUB_HEADERS_DIR,
+        PAPYRUS_EXTENDER_SCRIPTS,
         LILAC_SCRIPTS,
         MERGED_SKSE_DIR,
         SKYUI_SCRIPTS,
@@ -224,7 +274,8 @@ def compile_scripts(names):
             failed.append(name)
             print("[FAILED] %s\n" % name)
         else:
-            print("[OK] Scripts\\%s.pex\n" % name)
+            scrubbed = scrub_machine_name(os.path.join(OUTPUT_DIR, name + ".pex"))
+            print("[OK] Scripts\\%s.pex%s\n" % (name, " (build stamp scrubbed)" if scrubbed else ""))
 
     print("%d compiled, %d failed." % (len(names) - len(failed), len(failed)))
     if failed:

@@ -1,3 +1,10 @@
+Last Seed is released under the MIT License by its original author, Chesko. Last Seed 5.3
+is Aytrus's continuation. Its distribution terms on Nexus Mods (mod 56393) allow modifying the
+files and releasing fixes or improvements as long as Aytrus is credited as the creator and
+Chesko as the original author, and invite reuse of its plugin and Papyrus scripts in other
+mods. Some textures, models and sounds belong to other authors (see LastSeed_readme.txt) and
+need their permission for reuse.
+
 The MIT License (MIT)
 
 Copyright (c) 2018 Chesko

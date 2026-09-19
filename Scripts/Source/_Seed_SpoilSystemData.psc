@@ -1,4 +1,7 @@
 scriptname _Seed_SpoilSystemData extends _Seed_SpoilSystem
+;/
+(I Don't Think this is actually used, it looks like it was replaced by _Seed_AliasFoodMonitor)
+/;
 
 ; Vanilla Food
 Potion property FoodApple auto

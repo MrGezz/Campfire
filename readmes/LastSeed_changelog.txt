@@ -13,6 +13,36 @@ E-mail - chesko.tesmod@gmail.com
 ===================================================
 
 ===========================================
+Last Seed 0.3.0 Change Log
+===========================================
+
+- The needs systems are complete. Thirst, Fatigue, progressive diseases, alcohol and skooma,
+  food spoilage and preservation, water sources and waterskins, follower needs and the
+  Provisioning skill tree all run, and the Mod Configuration Menu has its full set of pages.
+  These systems come from Aytrus's Last Seed 5.3 (Nexus Mods 56393), which continued Chesko's
+  original with his permission, and are used here with credit.
+- (Special Edition) SKSE is detected on Special Edition. The check only ran on Legendary
+  Edition, so on SE the settings-profile load on startup and the meter presets never fired.
+- (Special Edition) Plugin detection no longer uses Game.GetModByName(), which returns 255 for
+  light (ESL-flagged) plugins and reported them as missing.
+- (Special Edition) SkyUI is looked up as SkyUI_SE.esp as well as SkyUI.esp everywhere,
+  including the Mod Configuration Menu's Profiles page, which read a property off None.
+- Fixed the ice wraith teeth message: its property was declared without the Property keyword,
+  so the plugin's value never reached the script.
+- Fixed the Add Portions to Provisions setting writing over the Auto-Eat setting in settings
+  profiles, and showing its own label instead of its help text.
+- Translations: the meter height help text was filed under the meter width key, and five meter
+  settings borrowed Frostfall's strings. Both fixed in all nine languages.
+- Campfire's follower registration now skips horses and reanimated followers and stops follower
+  food spoilage on unregistration, guarded so Campfire still works without Last Seed.
+- Requires powerofthree's Papyrus Extender, built for runtime 1.7.104.
+- Every script is compiled from the sources that ship with it. Nineteen were not, so the ice
+  wraith teeth fix above and the stumbling fix below had never reached the game; the other
+  seventeen were verified to come out with exactly the same shape they had before.
+- Fixed the drunk stumbling effect, whose source declared the tripping chance property twice
+  and so could not be compiled at all.
+
+===========================================
 Last Seed 0.2 Change Log
 ===========================================
 

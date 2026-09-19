@@ -49,13 +49,35 @@ endEvent
 
 Event OnUpdateGameTime()
 	float start_time = Game.GetRealHoursPassed()
-	Update()
 	if UpdateFrequencyGlobal
 		RegisterForSingleUpdateGameTime(UpdateFrequencyGlobal.GetValue())
+		SeedDebug(-1, self + " Registering for new update: " + UpdateFrequencyGlobal.GetValue())
 		SeedDebug(-1, self + " update finished in " + ((Game.GetRealHoursPassed() - start_time) * 3600.0) + " seconds.")
+	else
+		SeedDebug(-1, self + " update finished in " + ((Game.GetRealHoursPassed() - start_time) * 3600.0) + " seconds. No further updated scheduled")
 	endif
+	Update()
 endEvent
+
+
+Function startMonitoringRegeneration()
+	if(self.IsRunning())
+		RegisterForSingleUpdate(5)
+	endif
+endFunction
 
 ; @Overridden by system
 function Update()
 endFunction
+
+Function RefreshSystem()
+	if(!self.IsRunning())
+		self.StartSystem()
+	else
+		if(UpdateFrequencyGlobal)
+			RegisterForSingleUpdateGameTime(UpdateFrequencyGlobal.GetValue())
+		endif
+		RegisterForSingleUpdate(5)
+	Endif
+EndFunction
+
