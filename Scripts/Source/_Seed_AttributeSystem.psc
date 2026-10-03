@@ -95,7 +95,13 @@ function StopSystem()
 	SeedDebug(1, "[" + debugSystemName + "]: Stopped.")
 endFunction
 
+; Virtual hook for SM need neutralise check; called BEFORE the enabled gate.
+; Override in _Seed_HungerSystem / _Seed_FatigueSystem to call the compatibility layer.
+function CheckSurvivalModeCompat()
+endFunction
+
 function Update()
+	CheckSurvivalModeCompat()
 	if attributeEnabled.GetValueInt() == 2 && (isPlayer() || hasActor())
 		ChangeAttributeOverTime()
     endif

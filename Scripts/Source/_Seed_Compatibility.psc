@@ -114,8 +114,16 @@ bool property isFalskaarLoaded auto hidden					; Falskaar
 bool property isNordicCookingLoaded auto hidden				; Nordic Cooking
 bool property isMealtimeLoaded auto hidden					; Mealtime
 bool property isSAFOLoaded auto hidden						; Skyrim Alchemy and Food Overhaul															 
-bool property isFrozenNorthLoaded auto hidden				; The Frozen North														 
-;bool property isADERLoaded auto hidden						; Alcohol Drunk Effects Redone														 
+bool property isFrozenNorthLoaded auto hidden				; The Frozen North
+;bool property isADERLoaded auto hidden						; Alcohol Drunk Effects Redone
+bool property isSMLoaded = false auto hidden				; CC Survival Mode (food registration flag)
+; --- Survival Mode neutralise state (persist in save via auto hidden properties) -------
+bool property _Seed_SM_HungerNeutralised = false auto hidden		; true while SM hunger is zeroed
+bool property _Seed_SM_ExhaustionNeutralised = false auto hidden	; true while SM exhaustion is zeroed
+float property _Seed_SM_SavedHungerRate = 0.0 auto hidden		; SM HungerNeedRate before neutralise
+float property _Seed_SM_SavedExhaustionRate = 0.0 auto hidden		; SM ExhaustionNeedRate before neutralise
+GlobalVariable property _Seed_SM_CachedModeEnabled auto hidden	; cached Survival_ModeEnabled GLOB (000826)
+; --------------------------------------------------------------------------------------														 
 
 Formlist property _Seed_PortionsToProvisionsList auto 
 
@@ -478,6 +486,16 @@ function RunCompatibility()
 	if isSKYUILoaded
 		SendEvent_SKSE_LoadProfileOnStartup()
 	endif
+
+	; --- Survival Mode compatibility init ---
+	if Game.IsPluginInstalled("ccQDRSSE001-SurvivalMode.esl")
+		_Seed_SM_CachedModeEnabled = Game.GetFormFromFile(0x000826, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable
+	else
+		_Seed_SM_CachedModeEnabled = none
+	endif
+	bool lsRunning = LastSeedRunning.GetValueInt() == 2
+	CheckAndApplySMHunger(lsRunning && SeedUtil.GetHungerSystem().attributeEnabled.GetValueInt() == 2)
+	CheckAndApplySMExhaustion(lsRunning && SeedUtil.GetFatigueSystem().attributeEnabled.GetValueInt() == 2)
 endFunction
 
 function checkMods(bool forceSetFoodProperties = false)
@@ -568,7 +586,14 @@ function checkMods(bool forceSetFoodProperties = false)
 	if isCCFishingLoaded && LastCCFishingCheck == false
 		GetFoodDatastoreHandler().addCCFishing(false)
 	endif
-	
+
+	;CHECK Survival Mode
+	bool LastSMCheck = isSMLoaded
+	isSMLoaded = IsPluginLoaded(0x000826, "ccQDRSSE001-SurvivalMode.esl")	; Survival_ModeEnabled [GLOB:0x000826]
+	if isSMLoaded && LastSMCheck == false
+		GetFoodDatastoreHandler().addSurvivalMode(false)
+	endif
+
 	;CHECK Better Vampires
 	bool LastBetterVampiresCheck = isBetterVampiresLoaded
 	isBetterVampiresLoaded = IsPluginLoaded(0x0003E7D3, "Better Vampires.esp")	; BetterVampiresInitializationQuest [QUST:0x0003E7D3]
@@ -900,6 +925,8 @@ function setCACOGlobals()
 	setExternalGlobal(0x002CADF3, "Complete Alchemy & Cooking Overhaul.esp", 0)	; CACO_AlcoholDrunkAnimations [GLOB:0x002CADF3]
 	setExternalGlobal(0x005D217E, "Complete Alchemy & Cooking Overhaul.esp", 0)	; CACO_SleepChangesEnabled [GLOB:0x005D217E]
 	setExternalGlobal(0x004DEBED, "Complete Alchemy & Cooking Overhaul.esp", 0)	; CACO_OptionCraftFreeWater [GLOB:0x004DEBED]
+	setExternalGlobal(0x005023C5, "Complete Alchemy & Cooking Overhaul.esp", 0)	; CACO_BasicNeedsHungerEnabled [GLOB:0x005023C5]
+	setExternalGlobal(0x005D72AD, "Complete Alchemy & Cooking Overhaul.esp", 0)	; CACO_BasicNeedsFatiguedEnabled [GLOB:0x005D72AD]
 	;_Seed_Setting_FollowersConsumeFood.setValue(2)
 endFunction
 
@@ -907,6 +934,131 @@ function setExternalGlobal(int aiFormID, String espName, float value)
 	GlobalVariable theGlobal = Game.GetFormFromFile(aiFormID, espName) as GlobalVariable
 	if theGlobal
 		theGlobal.setValue(value)
+	endif
+endFunction
+
+; ============================================================
+; Survival Mode (CC) need neutralise / restore
+; All FormIDs from ccQDRSSE001-SurvivalMode.esl (measured D:\b\aotc\facts\sm-neutralize.md)
+; ============================================================
+
+function NeutraliseSurvivalHunger()
+	if _Seed_SM_HungerNeutralised
+		return
+	endif
+	string kMod = "ccQDRSSE001-SurvivalMode.esl"
+	GlobalVariable kRate  = Game.GetFormFromFile(0x000829, kMod) as GlobalVariable	; Survival_HungerNeedRate
+	GlobalVariable kValue = Game.GetFormFromFile(0x00081A, kMod) as GlobalVariable	; Survival_HungerNeedValue
+	if !kRate || !kValue
+		return
+	endif
+	float savedRate = kRate.GetValue()
+	if savedRate != 0.0
+		_Seed_SM_SavedHungerRate = savedRate
+	elseif _Seed_SM_SavedHungerRate == 0.0
+		_Seed_SM_SavedHungerRate = 7.5
+	endif
+	kRate.SetValue(0.0)
+	kValue.SetValue(0.0)
+	PlayerRef.SetAV("Variable02", 0.0)
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000876, kMod) as Spell)	; HungerStage0
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00087E, kMod) as Spell)	; HungerStage1
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000880, kMod) as Spell)	; HungerStage2
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000881, kMod) as Spell)	; HungerStage3
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000886, kMod) as Spell)	; HungerStage4
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000885, kMod) as Spell)	; HungerStage5
+	_Seed_SM_HungerNeutralised = true
+	trace("[LastSeed] SM hunger neutralised (savedRate=" + _Seed_SM_SavedHungerRate + ")")
+endFunction
+
+function RestoreSurvivalHunger()
+	if !_Seed_SM_HungerNeutralised
+		return
+	endif
+	GlobalVariable kRate = Game.GetFormFromFile(0x000829, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable
+	if kRate
+		float restoreRate = _Seed_SM_SavedHungerRate
+		if restoreRate == 0.0
+			restoreRate = 7.5
+		endif
+		kRate.SetValue(restoreRate)
+	endif
+	_Seed_SM_HungerNeutralised = false
+	trace("[LastSeed] SM hunger restored")
+endFunction
+
+function NeutraliseSurvivalExhaustion()
+	if _Seed_SM_ExhaustionNeutralised
+		return
+	endif
+	string kMod = "ccQDRSSE001-SurvivalMode.esl"
+	GlobalVariable kRate  = Game.GetFormFromFile(0x000824, kMod) as GlobalVariable	; Survival_ExhaustionNeedRate
+	GlobalVariable kValue = Game.GetFormFromFile(0x000816, kMod) as GlobalVariable	; Survival_ExhaustionNeedValue
+	if !kRate || !kValue
+		return
+	endif
+	float savedRate = kRate.GetValue()
+	if savedRate != 0.0
+		_Seed_SM_SavedExhaustionRate = savedRate
+	elseif _Seed_SM_SavedExhaustionRate == 0.0
+		_Seed_SM_SavedExhaustionRate = 9.0
+	endif
+	kRate.SetValue(0.0)
+	kValue.SetValue(0.0)
+	PlayerRef.SetAV("Variable03", 0.0)
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000878, kMod) as Spell)	; ExhaustionStage1
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000879, kMod) as Spell)	; ExhaustionStage2
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00087A, kMod) as Spell)	; ExhaustionStage3
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00087B, kMod) as Spell)	; ExhaustionStage4
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00087D, kMod) as Spell)	; ExhaustionStage5
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00090F, kMod) as Spell)	; ExhaustionStage3NoDisease
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00090C, kMod) as Spell)	; ExhaustionStage4NoDisease
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00090D, kMod) as Spell)	; ExhaustionStage5NoDisease
+	_Seed_SM_ExhaustionNeutralised = true
+	trace("[LastSeed] SM exhaustion neutralised (savedRate=" + _Seed_SM_SavedExhaustionRate + ")")
+endFunction
+
+function RestoreSurvivalExhaustion()
+	if !_Seed_SM_ExhaustionNeutralised
+		return
+	endif
+	GlobalVariable kRate = Game.GetFormFromFile(0x000824, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable
+	if kRate
+		float restoreRate = _Seed_SM_SavedExhaustionRate
+		if restoreRate == 0.0
+			restoreRate = 9.0
+		endif
+		kRate.SetValue(restoreRate)
+	endif
+	_Seed_SM_ExhaustionNeutralised = false
+	trace("[LastSeed] SM exhaustion restored")
+endFunction
+
+; Called from _Seed_HungerSystem.CheckSurvivalModeCompat (before the enabled gate)
+; lsOwnsHunger = LastSeedRunning==2 && _Seed_Setting_SystemEnabled_Hunger==2
+function CheckAndApplySMHunger(bool lsOwnsHunger)
+	if !_Seed_SM_CachedModeEnabled
+		return
+	endif
+	bool smEnabled = _Seed_SM_CachedModeEnabled.GetValueInt() == 1
+	if smEnabled && lsOwnsHunger
+		NeutraliseSurvivalHunger()
+	elseif _Seed_SM_HungerNeutralised
+		RestoreSurvivalHunger()
+	endif
+endFunction
+
+; Called from _Seed_FatigueSystem.CheckSurvivalModeCompat (before the enabled gate)
+; lsOwnsExhaustion = LastSeedRunning==2 && _Seed_Setting_SystemEnabled_Fatigue==2
+function CheckAndApplySMExhaustion(bool lsOwnsExhaustion)
+	if !_Seed_SM_CachedModeEnabled
+		return
+	endif
+	bool smEnabled = _Seed_SM_CachedModeEnabled.GetValueInt() == 1
+	if smEnabled && lsOwnsExhaustion
+		NeutraliseSurvivalExhaustion()
+	elseif _Seed_SM_ExhaustionNeutralised
+		RestoreSurvivalExhaustion()
 	endif
 endFunction
 

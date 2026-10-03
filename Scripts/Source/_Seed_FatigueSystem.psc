@@ -373,6 +373,13 @@ function ApplyAttributeLevel(int level, bool isIncreasing, bool forceMeter = fal
 	endif
 endFunction
 
+;@Override: SM exhaustion neutralise check (runs BEFORE the enabled gate in parent.Update)
+function CheckSurvivalModeCompat()
+	_Seed_Compatibility compat = SeedUtil.GetCompatibilitySystem()
+	bool lsOwnsExhaustion = compat.LastSeedRunning.GetValueInt() == 2 && attributeEnabled.GetValueInt() == 2
+	compat.CheckAndApplySMExhaustion(lsOwnsExhaustion)
+endFunction
+
 ;TODO: Finish Follower Fatigue
 ;/
 function showAttributeMessage(int level)

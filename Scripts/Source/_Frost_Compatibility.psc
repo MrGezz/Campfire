@@ -229,6 +229,11 @@ Message property _Frost_ReleaseNotes_3_4 auto
 
 bool hotfix341 = false
 
+; SM cold neutralise state — survive StopFrostfall/StartFrostfall cycles as script variables
+float _Frost_SM_SavedColdInterval = 0.0
+bool  _Frost_SM_ColdNeutralised   = false
+GlobalVariable _Frost_SM_ModeEnabled = none	; Survival_ModeEnabled, re-resolved on every compatibility pass
+
 Event OnPlayerLoadGame()
 	RunCompatibility()
 	RegisterForKeysOnLoad()
@@ -613,7 +618,9 @@ function RunCompatibility()
 	endif
 
 	RunCompatibilityArmors()
-	
+	_Frost_SM_ModeEnabled = Game.GetFormFromFile(0x000826, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable	; Survival_ModeEnabled
+	CheckSMColdState()
+
 	trace("[Frostfall]======================================================================================================")
 	trace("[Frostfall]                      Frostfall start-up and compatibility checks complete.   		                ")
 	trace("[Frostfall]======================================================================================================")
@@ -627,6 +634,81 @@ function RunCompatibility()
 	RegisterForMenusOnLoad()
 	AddStartupSpells()
 	RegisterCampfireSkill()
+endFunction
+
+; ─── Survival Mode cold neutralise / restore (design §5) ─────────────────────────────────────────
+; While Frostfall is running and SM is enabled, set SM's cold-tick interval to 86400 (game-hours)
+; so SM's cold need never ticks up.  When Frostfall stops or SM is disabled, restore the saved
+; interval.  Remembered values live as script variables (_Frost_SM_SavedColdInterval /
+; _Frost_SM_ColdNeutralised) so a save carries them without requiring new ESP globals.
+
+bool function _IsSMInstalled()
+	return Game.GetFormFromFile(0x000826, "ccQDRSSE001-SurvivalMode.esl") != none
+endFunction
+
+function NeutraliseSurvivalCold()
+	if _Frost_SM_ColdNeutralised
+		return	; already neutralised
+	endif
+	GlobalVariable kModeEnabled = Game.GetFormFromFile(0x000826, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable	; Survival_ModeEnabled
+	if kModeEnabled == none || kModeEnabled.GetValueInt() != 1
+		return	; SM not installed or not currently enabled
+	endif
+	GlobalVariable kColdInterval = Game.GetFormFromFile(0x000814, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable	; Survival_UpdateGameTimeIntervalCold
+	GlobalVariable kColdValue    = Game.GetFormFromFile(0x00081B, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable	; Survival_ColdNeedValue
+	if kColdInterval == none || kColdValue == none
+		return
+	endif
+	float savedInterval = kColdInterval.GetValue()
+	if savedInterval < 1000.0	; only save if not already our sentinel
+		_Frost_SM_SavedColdInterval = savedInterval
+	endif
+	kColdInterval.SetValue(86400.0)	; cold tick reschedules live; SM never re-queues for ~86 400 game-hours
+	kColdValue.SetValue(0.0)
+	PlayerRef.SetAV("Variable04", 0.0)	; ColdHealthPenalty AV — clears immediately
+	; Remove active cold stage spells (they self-clear on the next normal SM tick, but removing
+	; now avoids a window where stale spell effects persist)
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000890, "ccQDRSSE001-SurvivalMode.esl") as Spell)	; ColdStage0
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00086E, "ccQDRSSE001-SurvivalMode.esl") as Spell)	; ColdStage1
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000891, "ccQDRSSE001-SurvivalMode.esl") as Spell)	; ColdStage2
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x00086D, "ccQDRSSE001-SurvivalMode.esl") as Spell)	; ColdStage3
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000870, "ccQDRSSE001-SurvivalMode.esl") as Spell)	; ColdStage4
+	PlayerRef.RemoveSpell(Game.GetFormFromFile(0x000871, "ccQDRSSE001-SurvivalMode.esl") as Spell)	; ColdStage5
+	_Frost_SM_ColdNeutralised = true
+	trace("[Frostfall][SM] Survival Mode cold neutralised (Frostfall owns cold).")
+endFunction
+
+function RestoreSurvivalCold()
+	if !_Frost_SM_ColdNeutralised
+		return	; nothing to restore
+	endif
+	GlobalVariable kColdInterval = Game.GetFormFromFile(0x000814, "ccQDRSSE001-SurvivalMode.esl") as GlobalVariable	; Survival_UpdateGameTimeIntervalCold
+	if kColdInterval == none
+		_Frost_SM_ColdNeutralised = false
+		return
+	endif
+	float restoreInterval = _Frost_SM_SavedColdInterval
+	if restoreInterval <= 0.0 || restoreInterval >= 1000.0
+		restoreInterval = 0.0834	; SM default (sm-neutralize.md Q1 — GlobalFloat default)
+	endif
+	kColdInterval.SetValue(restoreInterval)
+	_Frost_SM_ColdNeutralised = false
+	trace("[Frostfall][SM] Survival Mode cold restored (interval=" + restoreInterval + ").")
+endFunction
+
+function CheckSMColdState()
+	; Cheap state poll: compare Survival_ModeEnabled against the known neutralised flag.
+	; Called from RunCompatibility (OnPlayerLoadGame + StartFrostfall), which re-resolves the cached
+	; form, and from ExposureSystem.Update, where it costs one GlobalVariable read.
+	if !_Frost_SM_ModeEnabled
+		return	; Survival Mode not installed
+	endif
+	int smEnabled = _Frost_SM_ModeEnabled.GetValueInt()
+	if smEnabled == 1 && !_Frost_SM_ColdNeutralised
+		NeutraliseSurvivalCold()
+	elseif smEnabled == 0 && _Frost_SM_ColdNeutralised
+		RestoreSurvivalCold()
+	endif
 endFunction
 
 function Upgrade_3_0_1()

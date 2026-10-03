@@ -137,11 +137,14 @@ endEvent
 Event StopLastSeed()
 	debug.trace("[LastSeed] Stopping Last Seed...")
 	_Seed_Stopping_Begin.Show()
-	
+
 	;if self.IsRunning()
 	;	self.Stop()
 	;endif
 	PlayerAlias.Clear()
+	; Restore SM needs before shutting down our systems
+	SeedUtil.GetCompatibilitySystem().RestoreSurvivalHunger()
+	SeedUtil.GetCompatibilitySystem().RestoreSurvivalExhaustion()
 	StopAllSystems()
 	RemoveAllISMs()
 	RemoveAllMeters()

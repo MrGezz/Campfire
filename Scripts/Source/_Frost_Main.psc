@@ -146,6 +146,7 @@ Event StopFrostfall()
 	_Frost_ColdISM_Level5.Remove()
 	RemoveAllMeters()
 	UnregisterCampfireSkill()
+	FrostUtil.GetCompatibilitySystem().RestoreSurvivalCold()
 	debug.trace("[Frostfall] Frostfall shut down successfully.")
 endEvent
 

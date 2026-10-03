@@ -755,7 +755,7 @@ function addCACO(bool checkRequired = true)
 	AddModFood(0x005D72AF, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsFatigueLvl01 "Tired" [ALCH:0x005D72AF]
 	AddModFood(0x005DC3C0, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsFatigueLvl02 "Fatigued" [ALCH:0x005DC3C0]
 	AddModFood(0x005DC3C2, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsFatigueLvl03 "Exhausted" [ALCH:0x005DC3C2]
-	AddModFood(0x005DC3C2, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsHungerLvl00 "Not Hungry" [ALCH:0x0046A34E]
+	AddModFood(0x0046A34E, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsHungerLvl00 "Not Hungry" [ALCH:0x0046A34E]
 	AddModFood(0x0073499B, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsHungerLvl00End "Not Hungry" [ALCH:0x0073499B]
 	AddModFood(0x004FD2BA, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsHungerLvl01 "Hungry" [ALCH:0x004FD2BA]
 	AddModFood(0x004FD2B7, "Complete Alchemy & Cooking Overhaul.esp", _Seed_NotFood)	; CACO_FoodBasicNeedsHungerLvl02 "Famished" [ALCH:0x004FD2B7]
@@ -1220,7 +1220,7 @@ function addCACOSystem()
 	AddModFood(0x005D72AF, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsFatigueLvl01 "Tired" [ALCH:0x005D72AF]
 	AddModFood(0x005DC3C0, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsFatigueLvl02 "Fatigued" [ALCH:0x005DC3C0]
 	AddModFood(0x005DC3C2, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsFatigueLvl03 "Exhausted" [ALCH:0x005DC3C2]
-	AddModFood(0x005DC3C2, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsHungerLvl00 "Not Hungry" [ALCH:0x0046A34E]
+	AddModFood(0x0046A34E, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsHungerLvl00 "Not Hungry" [ALCH:0x0046A34E]
 	AddModFood(0x0073499B, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsHungerLvl00End "Not Hungry" [ALCH:0x0073499B]
 	AddModFood(0x004FD2BA, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsHungerLvl01 "Hungry" [ALCH:0x004FD2BA]
 	AddModFood(0x004FD2B7, "Complete Alchemy & Cooking Overhaul.esp", _Seed_SystemFoods)	; CACO_FoodBasicNeedsHungerLvl02 "Famished" [ALCH:0x004FD2B7]
@@ -2093,8 +2093,31 @@ function addCCFishing(bool checkRequired = true)
 		ClearAndAddModFood(0x00000C2D, "ccBGSSSE001-Fish.esm", _Seed_DrinkAlcoholic, _Seed_DrinkAlcoholicSpirit)	; ccBGSSSE001_MiscKhajiit_AgedFlin "Aged Flin" [ALCH:0x00000C2D]
 		
 		initialiseWaterBottles_CCFishing()
-		
+
 		_Seed_ImportCCFish_Done.show()
+	endif
+endFunction
+
+function addSurvivalMode(bool checkRequired = true)
+	bool addFood = true
+	if(checkRequired)
+		addFood = SeedUtil.GetCompatibilitySystem().isSMLoaded
+	endif
+
+	if addFood
+		; CC Survival Mode hot soups/stews (ccQDRSSE001-SurvivalMode.esl)
+		ClearAndAddModFood(0x0009E0, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotCabbagePotatoSoup "Cabbage Potato Soup" [ALCH:0x0009E0]
+		ClearAndAddModFood(0x0009E1, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotCabbageSoup "Cabbage Soup" [ALCH:0x0009E1]
+		ClearAndAddModFood(0x0009E2, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotPotatoSoup "Potato Soup" [ALCH:0x0009E2]
+		ClearAndAddModFood(0x0009E3, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotTomatoSoup "Tomato Soup" [ALCH:0x0009E3]
+		ClearAndAddModFood(0x0009E4, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotVegetableSoup "Vegetable Soup" [ALCH:0x0009E4]
+		ClearAndAddModFood(0x0009E5, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_DLC2FoodHotHorkerAshYamStew "Horker and Ash Yam Stew" [ALCH:0x0009E5]
+		ClearAndAddModFood(0x0009E6, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotAppleCabbageStew "Apple Cabbage Stew" [ALCH:0x0009E6]
+		ClearAndAddModFood(0x0009E7, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotBeefStew "Beef Stew" [ALCH:0x0009E7]
+		ClearAndAddModFood(0x0009E8, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotHorkerStew "Horker Stew" [ALCH:0x0009E8]
+		ClearAndAddModFood(0x0009E9, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotVenisonStew "Venison Stew" [ALCH:0x0009E9]
+		ClearAndAddModFood(0x0009EA, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_BYOHFoodHotClamChowder "Clam Chowder" [ALCH:0x0009EA]
+		ClearAndAddModFood(0x000A08, "ccQDRSSE001-SurvivalMode.esl", _Seed_Stews, _Seed_Food_RestoreHungerSuperior)	; Survival_FoodHotElsweyrFondue "Elsweyr Fondue" [ALCH:0x000A08]
 	endif
 endFunction
 

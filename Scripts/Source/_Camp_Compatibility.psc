@@ -653,6 +653,43 @@ function RunCompatibility()
 		endif
 	endif
 
+	; CC Survival Mode Firewood — register campfire FURN as a Campfire heat source (design D7)
+	; Mirror the DLC2 pattern at lines 489-532; cast as Form (not ObjectReference); HasForm guards.
+	if IsPluginLoaded(0x000804, "ccQDRSSE002-Firewood.esl")
+		form ccFWHeatForm = Game.GetFormFromFile(0x000804, "ccQDRSSE002-Firewood.esl")	;ccQDRSSE002_CampfireFurn
+		if !(_Camp_HeatSources_All.HasForm(ccFWHeatForm))
+			_Camp_HeatSources_All.AddForm(ccFWHeatForm)
+		endif
+		if !(_Camp_HeatSources_Fire.HasForm(ccFWHeatForm))
+			_Camp_HeatSources_Fire.AddForm(ccFWHeatForm)
+		endif
+		if !(_Camp_HeatSources_Fire_Medium.HasForm(ccFWHeatForm))
+			_Camp_HeatSources_Fire_Medium.AddForm(ccFWHeatForm)
+		endif
+	endif
+
+	; CC Survival Mode — add Campfire lit fuels to SM warm-up list so Campfire fires warm under SM (design D7)
+	; Survival_WarmUpObjectsList ccQDRSSE001-SurvivalMode.esl|0008AA; sentinel = first Lit form
+	if IsPluginLoaded(0x000826, "ccQDRSSE001-SurvivalMode.esl")
+		FormList kWarmUpList = Game.GetFormFromFile(0x0008AA, "ccQDRSSE001-SurvivalMode.esl") as FormList	; Survival_WarmUpObjectsList
+		if kWarmUpList != none
+			form kSentinel = Game.GetFormFromFile(0x032333, "Campfire.esm")		;_Camp_Fuel_Fragile_BranchesLit
+			if kSentinel != none && !(kWarmUpList.HasForm(kSentinel))
+				kWarmUpList.AddForm(kSentinel)
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x032334, "Campfire.esm"))	;_Camp_Fuel_Fragile_BooksLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x05C8D6, "Campfire.esm"))	;_Camp_Fuel_Fragile_KindlingLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x0328A6, "Campfire.esm"))	;_Camp_Fuel_Flickering_BranchesLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x0328A8, "Campfire.esm"))	;_Camp_Fuel_Flickering_BooksLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x05C8D8, "Campfire.esm"))	;_Camp_Fuel_Flickering_KindlingLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x0328B9, "Campfire.esm"))	;_Camp_Fuel_Crackling_FirewoodLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x040013, "Campfire.esm"))	;_Camp_Fuel_Crackling_DeadwoodLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x033E69, "Campfire.esm"))	;_Camp_Fuel_Roaring_FirewoodLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x033E67, "Campfire.esm"))	;_Camp_Fuel_Roaring_DeadwoodLit
+				kWarmUpList.AddForm(Game.GetFormFromFile(0x06ABB2, "Campfire.esm"))	;_Camp_Fuel_Roaring_WorldFirewoodLit
+			endif
+		endif
+	endif
+
 	trace("[Campfire]======================================================================================================")
 	trace("[Campfire]                            Campfire compatibility check complete.   		                           ")
 	trace("[Campfire]======================================================================================================")

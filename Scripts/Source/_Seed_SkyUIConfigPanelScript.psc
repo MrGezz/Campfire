@@ -2308,6 +2308,7 @@ event OnOptionSelect(int option)
 	;ENABLE HUNGER
 	elseif option == Gameplay_HungerEnabled_OID
 		_Seed_OnOptionSelect(_Seed_Setting_SystemEnabled_Hunger, Gameplay_HungerEnabled_OID, "hunger_enabled")
+		SeedUtil.GetCompatibilitySystem().CheckAndApplySMHunger(LastSeedRunning.GetValueInt() == 2 && _Seed_Setting_SystemEnabled_Hunger.GetValueInt() == 2)
 	; ENABLE THIRST
 	elseif option == Gameplay_ThirstEnabled_OID
 		_Seed_OnOptionSelect(_Seed_Setting_SystemEnabled_Thirst, Gameplay_ThirstEnabled_OID, "thirst_enabled")
@@ -2342,7 +2343,8 @@ event OnOptionSelect(int option)
 		_Seed_OnOptionSelect(_Seed_ProvisionsAddPortions, Gameplay_ProvisionsAddPortions_OID, "portions_to_provisions")			
 	; ENABLE FATIGUE
 	elseif option == Gameplay_FatigueEnabled_OID
-		_Seed_OnOptionSelect(_Seed_Setting_SystemEnabled_Fatigue, Gameplay_FatigueEnabled_OID, "fatigue_enabled")	
+		_Seed_OnOptionSelect(_Seed_Setting_SystemEnabled_Fatigue, Gameplay_FatigueEnabled_OID, "fatigue_enabled")
+		SeedUtil.GetCompatibilitySystem().CheckAndApplySMExhaustion(LastSeedRunning.GetValueInt() == 2 && _Seed_Setting_SystemEnabled_Fatigue.GetValueInt() == 2)
 	; SLEEP AFFECTED BY NEEDS AND LOCATION	
 	elseif option == Gameplay_SleepAffectedByNeeds_OID
 		_Seed_OnOptionSelect(_Seed_Setting_SleepAffectedByNeeds, Gameplay_SleepAffectedByNeeds_OID, "sleep_needs")	

@@ -195,6 +195,10 @@ function Update()
 	lastExposureTarget = target
 	lastUpdateTime = thisUpdateTime
 	lastUpdateGameTime = thisUpdateGameTime
+
+	; SM cold state check: neutralise/restore on SM toggle (design §5)
+	; Only when SM is installed; compare ModeEnabled with the last-known neutralised state.
+	FrostUtil.GetCompatibilitySystem().CheckSMColdState()
 endFunction
 
 float function CalculateExposureTarget()

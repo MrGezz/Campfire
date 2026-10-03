@@ -190,9 +190,16 @@ float function GetAttributeMulti()
 	float result = 1
 	result = result + _Seed_DiseaseNeedsMulti_StomachRot.getValue()
 	result = result * attributeRateMultiGlobal.getValue()
-	
+
 	result = result * getCarriageRideMulti()
-	
+
 	SeedDebug(1, "[" + debugSystemName + "]: Attribute Multiplier: " + result)
 	return result
+endFunction
+
+;@Override: SM hunger neutralise check (runs BEFORE the enabled gate in parent.Update)
+function CheckSurvivalModeCompat()
+	_Seed_Compatibility compat = SeedUtil.GetCompatibilitySystem()
+	bool lsOwnsHunger = compat.LastSeedRunning.GetValueInt() == 2 && attributeEnabled.GetValueInt() == 2
+	compat.CheckAndApplySMHunger(lsOwnsHunger)
 endFunction
