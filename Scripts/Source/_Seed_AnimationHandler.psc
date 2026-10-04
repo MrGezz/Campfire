@@ -32,7 +32,9 @@ bool function ActorCanAnimate(Actor target)
 	if target == playerRef
 		if _Seed_Setting_AnimatePlayer.getValueInt() != 2
 			return false
-		playerRef.GetAnimationVariableInt("i1stPerson") == 1 && _Seed_Setting_AnimatePlayer_FirstPerson.getValueInt() != 2
+		elseif playerRef.GetAnimationVariableInt("i1stPerson") == 1 && _Seed_Setting_AnimatePlayer_FirstPerson.getValueInt() != 2
+			return false
+		elseif EasAnimating(target)
 			return false
 		endif
 	elseif _Seed_Setting_AnimateFollowers.getValueInt() != 2
@@ -56,6 +58,21 @@ bool function ActorCanAnimate(Actor target)
 	
 	; Return true if all conditons met
 	return true
+endFunction
+
+; Eating Animations And Sounds plays the player's eating animation from its own behaviour graph and holds the
+; graph variable bEasState while it runs; an idle played over it cuts it off, so the player's eat and drink idles
+; step aside while it is set.
+bool function EasAnimating(Actor target)
+	return target == PlayerRef && target.GetAnimationVariableBool("bEasState")
+endFunction
+
+; EAS starts its animation from the consumed food's keywords a moment after the item is used; with EAS installed the
+; player's idle waits that moment so EasAnimating sees it.
+function WaitForEas(Actor target)
+	if target == PlayerRef && GetSKSELoaded() && Game.IsPluginInstalled("TaberuAnimation.esp")
+		Utility.Wait(0.5)
+	endif
 endFunction
 
 function stopAnimation(Actor target, int index)
@@ -85,6 +102,7 @@ endFunction
 function eatAnimation(int Index)
 	if !getAnimated(index)
 		Actor target = getActor(index)
+		WaitForEas(target)
 		if ActorCanAnimate(target)
 			stopAnimation(target, index)
 			setAnimated(index, true)
@@ -108,6 +126,7 @@ endFunction
 function drinkAnimation(int Index)
 	if !getAnimated(index)
 		Actor target = getActor(index)
+		WaitForEas(target)
 		if ActorCanAnimate(target)
 			stopAnimation(target, index)
 			setAnimated(index, true)
