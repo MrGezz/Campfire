@@ -26,3 +26,22 @@ endEvent
 Event SetExposureMeterGlow(float percent)
 	(Meter as _Frost_Meter).SetGlow(percent)
 endEvent
+
+; Frostfall 3.5: while Frostfall.dll's HUD bars are on, this SkyUI meter stays hidden whatever the meter settings say.
+; @overrides CommonMeterInterfaceHandler
+function UpdateMeter(bool abForceDisplayIfEnabled = false)
+	if FrostfallNative.OldMetersHidden()
+		RemoveMeter()
+		return
+	endif
+	parent.UpdateMeter(abForceDisplayIfEnabled)
+endFunction
+
+; @overrides CommonMeterInterfaceHandler
+function ForceMeterDisplay(bool flash = false)
+	if FrostfallNative.OldMetersHidden()
+		RemoveMeter()
+		return
+	endif
+	parent.ForceMeterDisplay(flash)
+endFunction

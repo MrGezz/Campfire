@@ -40,6 +40,7 @@ int stars_counter = 0
 bool started_via_stars = false
 bool gave_friend_items = false
 bool isSKYUILoaded = false
+bool seen_interior = false		; Frostfall 3.5 auto-start: has the player been inside yet?
 
 Event OnInit()
 	; Add config spell on start-up.
@@ -57,9 +58,23 @@ Event OnUpdate()
 	; We stop updating when the mod has been started
 	; and the friend items have been granted.
 
+	if PlayerRef.IsInInterior()
+		seen_interior = true
+	endif
+
 	; Don't allow the player to start the mod at inopportune times
 	; (cart ride at beginning, etc)
 	if !Game.IsFightingControlsEnabled() || PlayerRef.IsInInterior()
+		RegisterForSingleUpdate(5)
+		return
+	endif
+
+	; Frostfall 3.5: with Frostfall.dll's auto-start on, the old start prompts (journal objective, night-sky prompt)
+	; are skipped and Frostfall starts on its own the first time the player steps outside.
+	if FrostfallRunning.GetValueInt() != 2 && _Frost_TrackingQuest.GetStage() < 20 && FrostfallNative.IsInstalled() && FrostfallNative.AutoStartEnabled()
+		if seen_interior
+			StartFromMenu()
+		endif
 		RegisterForSingleUpdate(5)
 		return
 	endif
@@ -111,7 +126,12 @@ endFunction
 
 Event StartFrostfall(bool abBypassStartupMessage = false)
 	debug.trace("[Frostfall] Starting Frostfall...")
-	_Frost_StartingUpMsg.Show()
+	; Frostfall 3.5: with Frostfall.dll installed, the start-up message boxes, notifications and the "COMPLETED:
+	; FROSTFALL" objective banner are replaced by the Frostfall logo fading in and out once start-up finishes.
+	bool use_logo = FrostfallNative.IsInstalled()
+	if !use_logo
+		_Frost_StartingUpMsg.Show()
+	endif
 
 	GetClothingDatastoreHandler().InitializeDatastore()
 	; Menu-Mode blocked functions
@@ -119,14 +139,31 @@ Event StartFrostfall(bool abBypassStartupMessage = false)
 		self.Start()
 	endif
 	PlayerAlias.ForceRefTo(PlayerRef)
-	StartModFirstTime(abBypassStartupMessage)
-	_Frost_TrackingQuest.SetStage(20)
+	StartModFirstTime(abBypassStartupMessage, use_logo)
+	if _Frost_TrackingQuest.GetStage() < 20
+		if use_logo
+			_Frost_TrackingQuest.SetObjectiveDisplayed(10, false)
+		endif
+		_Frost_TrackingQuest.SetStage(20)
+	endif
 	Utility.Wait(2.0)
 	StartAllSystems()
+	; Frostfall 3.5: on a new game Campfire grants its powers (Build Campfire, Create Item, Harvest Wood, Instincts)
+	; during character creation, and the race change removes them until the next save is loaded. Frostfall starts
+	; after that, so it has Campfire hand them out again (Campfire's own function; it respects Campfire's hotkeys).
+	_Camp_Compatibility campfire_compatibility = CampUtil.GetCompatibilitySystem()
+	if campfire_compatibility
+		campfire_compatibility.AddStartupSpells()
+		campfire_compatibility.CheckHarvestWoodDisabled()
+	endif
 	FrostUtil.GetCompatibilitySystem().RunCompatibility()
 	FrostUtil.GetCompatibilitySystem().SendEvent_FrostfallLoaded()
 	CheckInitialEquipment()
-	_Frost_StartingUpDoneMsg.Show()
+	if use_logo
+		FrostfallNative.ShowStartupLogo()
+	else
+		_Frost_StartingUpDoneMsg.Show()
+	endif
 	debug.trace("[Frostfall] Frostfall is now running.")
 endEvent
 
@@ -246,9 +283,12 @@ function AddFriendItems()
 	endif
 endFunction
 
-function StartModFirstTime(bool abBypassStartupMessage = false)
+function StartModFirstTime(bool abBypassStartupMessage = false, bool abUseLogo = false)
 	if _Frost_TrackingQuest.GetStage() == 20
 		return
+	elseif abUseLogo
+		; Frostfall 3.5 (Frostfall.dll installed): hand over the Survivor's Guide quietly; the logo replaces the messages.
+		PlayerRef.AddItem(_Frost_SurvivorsGuide)
 	else
 		;New game / first time user, show startup routine.
 		if !abBypassStartupMessage
@@ -264,6 +304,27 @@ function StartModFirstTime(bool abBypassStartupMessage = false)
 		else
 			_Frost_FirstStartup_3SE.Show()
 		endif
+	endif
+endFunction
+
+; Frostfall 3.5: start / stop exactly as the MCM's "Start / Stop Frostfall" option does. Used by the auto-start and by
+; Frostfall.dll's menu buttons (through FrostfallNative).
+function StartFromMenu()
+	FrostfallRunning.SetValue(2)
+	RegisterForModEvents()
+	int handle = ModEvent.Create("Frost_StartFrostfall")
+	if handle
+		ModEvent.PushBool(handle, false)
+		ModEvent.Send(handle)
+	endif
+endFunction
+
+function StopFromMenu()
+	FrostfallRunning.SetValue(1)
+	RegisterForModEvents()
+	int handle = ModEvent.Create("Frost_StopFrostfall")
+	if handle
+		ModEvent.Send(handle)
 	endif
 endFunction
 

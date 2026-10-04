@@ -2,6 +2,7 @@ scriptname _Frost_PlayerSpellMonitor extends ReferenceAlias
 
 import FrostUtil
 import CampUtil
+import PO3_Events_Alias
 
 GlobalVariable property _Frost_WetLevel auto
 GlobalVariable property _Frost_PerkRank_FrostWarding auto
@@ -14,7 +15,27 @@ EffectShader property SteamFXShader auto
 bool fire_damage_lock = false
 bool frost_damage_lock = false
 
-Event OnMagicEffectApply(ObjectReference akCaster, MagicEffect akEffect)
+; Frostfall 3.5: the vanilla OnMagicEffectApply event fired for EVERY magic effect applied to the player (potions,
+; enchantments, abilities, other mods' cloaks...), and each one ran this script only to be ignored. With a large load
+; order that is a steady stream of wasted script work. Papyrus Extender's filtered event is only raised for effects
+; carrying the two keywords this monitor cares about. Registrations are refreshed on every load, which also upgrades
+; saves made with the old script.
+
+Event OnInit()
+	RegisterDamageFilters()
+EndEvent
+
+Event OnPlayerLoadGame()
+	RegisterDamageFilters()
+EndEvent
+
+function RegisterDamageFilters()
+	UnregisterForAllMagicEffectApplyEx(self)
+	RegisterForMagicEffectApplyEx(self, MagicDamageFire, true)
+	RegisterForMagicEffectApplyEx(self, MagicDamageFrost, true)
+endFunction
+
+Event OnMagicEffectApplyEx(ObjectReference akCaster, MagicEffect akEffect, Form akSource, bool abApplied)
 	if !fire_damage_lock && akEffect.HasKeyword(MagicDamageFire)
 		DecreaseExposureWetnessFireDamage()
 	elseif !frost_damage_lock && akEffect.HasKeyword(MagicDamageFrost)

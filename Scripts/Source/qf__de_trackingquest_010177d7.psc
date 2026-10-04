@@ -21,7 +21,15 @@ EndFunction
 ;BEGIN FRAGMENT Fragment_2
 Function Fragment_2()
 ;BEGIN CODE
-SetObjectiveCompleted(10)
+; Frostfall 3.5: stage 20 no longer completes the quest by itself (Frostfall.esp). With Frostfall.dll the start-up logo
+; replaces the "COMPLETED: FROSTFALL" banner, so the quest is stopped quietly; without it, it completes as before.
+if FrostfallNative.IsInstalled()
+	SetObjectiveDisplayed(10, false)
+	Stop()
+else
+	SetObjectiveCompleted(10)
+	CompleteQuest()
+endif
 ;END CODE
 EndFunction
 ;END FRAGMENT

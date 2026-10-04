@@ -2212,3 +2212,15 @@ endFunction
 function Event_LegacyWoodHarvest() global
     ;pass
 endFunction
+
+; Frostfall 3.5: is the player a vampire (or other undead) for Frostfall's Vampire Mode?
+; Campfire's IsPlayerUndead() only knows vanilla vampirism (undead race keyword, Dawnguard's VampireStatus). Vampire
+; overhauls (Sacrosanct, Better Vampires, ...) run their own vampirism but keep the vanilla PlayerIsVampire global
+; up to date, so that is checked as well.
+bool function IsPlayerVampireOrUndead() global
+    if CampUtil.IsPlayerUndead()
+        return true
+    endif
+    GlobalVariable player_is_vampire = Game.GetFormFromFile(0x000ED06D, "Skyrim.esm") as GlobalVariable   ; PlayerIsVampire
+    return player_is_vampire && player_is_vampire.GetValueInt() >= 1
+endFunction

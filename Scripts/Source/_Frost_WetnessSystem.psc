@@ -14,6 +14,8 @@ float property WETNESS_LEVEL_3 	= 700.0 autoReadOnly
 float property WETNESS_LEVEL_2 	= 550.0 autoReadOnly
 float property WETNESS_LEVEL_1 	= 200.0 autoReadOnly
 float property MIN_WETNESS 		= 0.0 autoReadOnly
+float property WADE_MIN_DEPTH	= 4.0 autoReadOnly			; Frostfall 3.5: water shallower than this (puddles) is ignored.
+float property WADE_SPEED		= 108.0 autoReadOnly 		; Frostfall 3.5: wetness gained while wading (4x rain; clothing does not help).
 int property WEATHERCLASS_RAIN 	= 2 autoReadOnly
 
 Actor property PlayerRef auto
@@ -205,6 +207,14 @@ function UpdateWetState()
 	bool inside_tent = GetCurrentTent()
 	bool inside_waterproof_tent = IsCurrentTentWaterproof()
 	bool taking_shelter = IsPlayerTakingShelter()
+
+	; Frostfall 3.5: wading. Standing or walking in water without swimming soaks the player up to how deep the water is:
+	; ankle-deep only dampens, knee-deep makes wet, waist-deep soaks. Rain in the open still wins (it can soak fully).
+	float wade_limit = GetWadingWetnessLimit()
+	if wade_limit > 0.0 && !(wet_conditions && !inside_tent && !taking_shelter)
+		WadeWetter(wade_limit)
+		return
+	endif
 	; FrostDebug(0, "~~~~ WetSystem ::: wet conditions: " + wet_conditions + ", inside tent " + inside_tent + ", waterproof " + inside_waterproof_tent + ", taking shelter: " + taking_shelter)
 	if wet_conditions
 		if inside_waterproof_tent || taking_shelter
@@ -219,6 +229,33 @@ function UpdateWetState()
 	else
 		DryOff(MIN_WETNESS)
 	endif
+endFunction
+
+float function GetWadingWetnessLimit()
+	float depth = FrostfallNative.WaterDepthAtPlayer()
+	if depth < WADE_MIN_DEPTH
+		return 0.0
+	endif
+	; ~15 units (ankles) -> 195, ~35 (knees) -> 375, ~65 (waist) -> 645, 80+ (chest) -> 750 (soaked)
+	float limit = depth * 9.0 + 60.0
+	if limit > MAX_WETNESS
+		limit = MAX_WETNESS
+	endif
+	return limit
+endFunction
+
+function WadeWetter(float limit)
+	if _Frost_AttributeWetness.GetValue() > limit
+		DryOff(limit)
+		return
+	endif
+	float update_freq = UpdateFrequencyGlobal.GetValue()
+	float time_delta_seconds = (this_update_time - last_update_time) * 3600.0
+	if time_delta_seconds > (update_freq * 2)
+		time_delta_seconds = (update_freq * 2)
+	endif
+	FrostDebug(1, "~~~~ Wetness ::: Wading : Limit " + limit)
+	ModAttributeWetness((WADE_SPEED * time_delta_seconds) / update_freq, limit)
 endFunction
 
 function DryOff(float limit)

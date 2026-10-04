@@ -427,6 +427,12 @@ function DoActivate(ObjectReference akActionRef)
         ; Calculate the displayed time remaining
         float displayed_time = GetRemainingDisplayTime()
         
+        ; Frostfall 3.5: offer a makeshift camp first (bedroll backpack worn, materials carried). Campfire's own menu
+        ; record is left untouched. Only with Frostfall loaded: without it the call into its script cannot bind.
+        if Game.GetModByName("Frostfall.esp") != 255 && _Frost_MakeshiftCamp.OfferCamp(self)
+            return
+        endif
+
         int i
         if displayed_time > 0.0
             i = _Camp_Campfire_Menu.Show(displayed_time as int, ((displayed_time * 60) as int) % 60)
@@ -455,6 +461,9 @@ function DoActivate(ObjectReference akActionRef)
                 PutOutFire()
             endif
             RefundRemainingFuel()
+            if Game.GetModByName("Frostfall.esp") != 255
+                _Frost_MakeshiftCamp.DestroyCampNear(self)
+            endif
             Utility.Wait(1.0)
             TakeDown()
         elseif i == 5

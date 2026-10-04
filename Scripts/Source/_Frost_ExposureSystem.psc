@@ -236,7 +236,9 @@ float function CalculateExposureTarget()
 	bool takingShelter = IsPlayerTakingShelter()
 	float SHELTER_MOD = 0.0
 	if tent
-		if IsTentWarm(tent)
+		if IsTentInsulated(tent)
+			SHELTER_MOD = 100.0
+		elseif IsTentWarm(tent)
 			SHELTER_MOD = 80.0
 		elseif IsTentWaterproof(tent) || takingShelter
 			SHELTER_MOD = 50.0
@@ -262,6 +264,17 @@ float function CalculateExposureTarget()
 	endif
 
 	return target
+endFunction
+
+; Frostfall 2026: a tent flagged insulated (the leather makeshift camp add-on) shelters better than any warm tent:
+; 100 off the target instead of 80, one exposure level more. Looked up at run time so no quest property is needed.
+Keyword insulated_tent_keyword
+
+bool function IsTentInsulated(ObjectReference akTent)
+	if !insulated_tent_keyword
+		insulated_tent_keyword = Game.GetFormFromFile(0x095012, "Frostfall.esp") as Keyword
+	endif
+	return insulated_tent_keyword && akTent.GetBaseObject().HasKeyword(insulated_tent_keyword)
 endFunction
 
 function UpdateExposure(float afExposureTarget)
@@ -490,6 +503,7 @@ function SetAfterFastTravelCondition()
 endFunction
 
 function ExposureEffectsUpdate()
+	RefreshVampireFlag()
 	float current_exposure = _Frost_AttributeExposure.GetValue()
 	UpdateExposureLevel()
 
@@ -812,7 +826,14 @@ function GetColder(float target, float game_hours_passed)
 	endif
 endFunction
 
+; Frostfall 3.5: isVampire used to be declared false and never assigned, so every vampire branch in this script was
+; dead code. It now mirrors the state _Frost_PlayerStateSystem keeps (honours the Vampire Mode setting and overhauls).
+function RefreshVampireFlag()
+	isVampire = (_Frost_MainQuest as _Frost_ConditionValues).IsVampire
+endFunction
+
 function GetFrostbite(bool force_frostbite = false)
+	RefreshVampireFlag()
 	if isVampire
 		return
 	endif

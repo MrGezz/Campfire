@@ -38,7 +38,7 @@ function HandleFrigidWater()
 		ForceFeedbackQuick()
 	endif
 
-	bool isInvulnerableUndead = IsPlayerUndead() && _Frost_Setting_VampireMode.GetValueInt() == 2
+	bool isInvulnerableUndead = IsPlayerVampireOrUndead() && _Frost_Setting_VampireMode.GetValueInt() == 2
 
 	if _Frost_Setting_FrigidWaterIsLethal.GetValueInt() == 2 && !isInvulnerableUndead
 		update_count = 0

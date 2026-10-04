@@ -5,6 +5,7 @@
 !.gitignore
 !LICENSE
 !README.md
+!PORT-SSE*.md
 
 #Whitelist directories:
 !*/
@@ -70,6 +71,7 @@
 
 #Interface
 !Interface/frostfall/*
+!Interface/frostfall/icons/*
 !Interface/campfire/*
 !Interface/lastseed/*
 #Patterns are case sensitive on Linux and macOS. The shipped translation files are
@@ -223,6 +225,14 @@
 !SKSE/Plugins/CampfireData/*
 !SKSE/Plugins/FrostfallData/*
 !SKSE/Plugins/LastSeedData/*
+
+#Frostfall.dll (HUD bars, start-up logo, SKSE Menu Framework page): sources, build files and the shipped
+#binary. Its PDB is built beside it and shipped by the release builder when present, but not tracked.
+!FrostfallNative/*
+!FrostfallNative/src/*
+!FrostfallNative/include/*
+!Frostfall.dll
+!Frostfall_Embers_FLM.ini
 
 #Working / raw files
 !WorkingFiles/*

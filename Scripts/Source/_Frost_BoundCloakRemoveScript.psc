@@ -22,11 +22,11 @@ Event OnContainerChanged(ObjectReference akNewContainer, ObjectReference akOldCo
 	endif
 EndEvent
 
+; Frostfall 3.5: unequipping the conjured cloak no longer dispels the spell. Anything that briefly unequips cloak-slot
+; gear (another item taking the slot, outfit or weather mods, re-casting) used to trigger this and end the spell the
+; moment it was cast. The spell now simply runs its duration: _Frost_BoundCloakScript.OnEffectFinish still removes the
+; cloak when it ends, and OnContainerChanged above still stops the cloak from being dropped or moved into a container.
 Event OnUnequipped(Actor akActor)
-	sndDeactivate.Play(PlayerRef)
-	ExitMenus()
-	_Frost_BoundCloakRemovedMsg.Show()
-	SendEvent_DispelBoundCloaks()
 EndEvent
 
 function SendEvent_DispelBoundCloaks()

@@ -119,7 +119,7 @@ endFunction
 
 function RefreshVampireState()
 	if _Frost_Setting_VampireMode.GetValueInt() > 0
-		if IsPlayerUndead()
+		if IsPlayerVampireOrUndead()
 			isVampire = true
 		else
 			isVampire = false

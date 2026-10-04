@@ -59,6 +59,7 @@ meshes\frostfall\_Frost_VaporBlastAreaEffect.nif
 meshes\frostfall\_frost_WoodHarvestingAnimAxe.nif
 Scripts\FrostfallAPI.pex
 Scripts\FrostUtil.pex
+Scripts\FrostfallNative.pex
 Scripts\qf__de_trackingquest_010177d7.pex
 Scripts\_FrostInternal.pex
 Scripts\_Frost_APDatastoreDefaultData.pex
@@ -96,6 +97,8 @@ Scripts\_Frost_InterfaceHandler.pex
 Scripts\_Frost_KindleEffectScript.pex
 Scripts\_Frost_KindleEffectScrollScript.pex
 Scripts\_Frost_Main.pex
+Scripts\_Frost_MakeshiftCamp.pex
+Scripts\_Frost_MakeshiftCampTent.pex
 Scripts\_Frost_Meter.pex
 Scripts\_Frost_PlayerDialogueMonitor.pex
 Scripts\_Frost_PlayerEquipMonitor.pex
@@ -171,6 +174,7 @@ Scripts\Source\_Frost_ShelterDetectScriptNear.psc
 Scripts\Source\_Frost_WeathersenseMessages.psc
 Scripts\Source\FrostfallAPI.psc
 Scripts\Source\FrostUtil.psc
+Scripts\Source\FrostfallNative.psc
 Scripts\Source\qf__de_trackingquest_010177d7.psc
 Scripts\Source\_FrostInternal.psc
 Scripts\Source\_Frost_APDatastoreDefaultData.psc
@@ -211,6 +215,8 @@ Scripts\Source\_Frost_KindleEffectScript.psc
 Scripts\Source\_Frost_KindleEffectScrollScript.psc
 Scripts\Source\_Frost_LightableFiresSystem.psc
 Scripts\Source\_Frost_Main.psc
+Scripts\Source\_Frost_MakeshiftCamp.psc
+Scripts\Source\_Frost_MakeshiftCampTent.psc
 Scripts\Source\_Frost_Meter.psc
 Scripts\Source\_Frost_PlayerDialogueMonitor.psc
 Scripts\Source\_Frost_PlayerEquipMonitor.psc

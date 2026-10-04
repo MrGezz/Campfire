@@ -70,8 +70,36 @@ copy_file(
     os.path.join(dirname, "Frostfall", "SKSE", "Plugins", "FrostfallData", "READ_THIS_PLEASE_AND_DO_NOT_DELETE.txt"),
 )
 
-for readme in ("Frostfall_readme.txt", "Frostfall_license.txt", "Frostfall_changelog.txt"):
+for readme in (
+    "Frostfall_readme.txt", "Frostfall_license.txt", "Frostfall_changelog.txt",
+    "Frostfall2026_readme.txt", "Frostfall2026_license.txt",
+):
     copy_file(project_path("readmes", readme), os.path.join(dirname, "Frostfall", "readmes", readme))
+
+# Copy files - the Frostfall 2026 layer (CageTV, MIT), everything that is read from disk rather than
+# from the archive:
+#   Frostfall.dll           SKSE loads plugins from Data\SKSE\Plugins; built by FrostfallNative\build-1.7.104.ps1
+#   logo and HUD icons      Frostfall.dll opens them by path (Data\Interface\frostfall\...)
+#   the freezing sounds     shipped loose as .xwm beside the .wav copies in the archive, as upstream does
+#   Frostfall_Embers_FLM    FormList Manipulator reads *_FLM.ini from Data; inert without it or without Embers XD
+if game == "SE":
+    loose = [("SKSE", "Plugins", "Frostfall.dll"), ("Frostfall_Embers_FLM.ini",), ("Interface", "frostfall", "frostfall_logo.png")]
+    loose += [("Interface", "frostfall", "icons", name) for name in ("exposure.png", "temperature.png", "warmth.png", "wetness.png")]
+    loose += [
+        ("sound", "fx", "frostfall", name + ".xwm")
+        for name in (
+            "frostfall_female_freezing", "frostfall_female_freezing2death",
+            "frostfall_male_freezing", "frostfall_male_freezing2death",
+        )
+    ]
+    for parts in loose:
+        copy_file(project_path(*parts), os.path.join(dirname, "Frostfall", *parts))
+    # CrashLogger prints source lines from the PDB; it is built beside the DLL and not tracked
+    copy_optional_file(
+        project_path("SKSE", "Plugins", "Frostfall.pdb"),
+        os.path.join(dirname, "Frostfall", "SKSE", "Plugins", "Frostfall.pdb"),
+        "debug symbols for Frostfall.dll",
+    )
 
 # Copy files - add-on
 addon = os.path.join(dirname, "SkyUI51AddOn")

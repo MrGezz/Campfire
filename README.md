@@ -141,6 +141,16 @@ Not covered by any of this, and still worth doing before a Special Edition relea
 - `0x00000BD7` for `SkyrimVR.esm` in the three `DetectGameRuntime` functions is still
   unverified; there is no Skyrim VR install here to read it from.
 
+### Frostfall 2026
+
+Frostfall here includes CageTV's Frostfall 2026 4.0.0 pre-release (MIT,
+<https://github.com/CageTV/Frostfall-2026>), which upstream ships as a second mod over Chesko's
+3.4.1: its `Frostfall.esp`, its scripts, the makeshift camp, and `Frostfall.dll` (HUD bars,
+start-up logo, a settings page in SKSE Menu Framework), built from `FrostfallNative/` for the
+current runtime. `PORT-SSE-FROSTFALL-2026.md` records what was taken, what this port keeps in
+its own version, and what was read and left out; `readmes/Frostfall2026_readme.txt` is
+upstream's own description and credits.
+
 ### Last Seed
 
 Last Seed is the 2017 Prologue (0.1) plus the Special Edition work above, and can now be
