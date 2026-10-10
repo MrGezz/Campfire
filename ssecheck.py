@@ -47,7 +47,7 @@ HEADER_VERSION_TOLERANCE = 0.001
 
 # NAVM records carry an NVNM subrecord whose first uint32 is a version. Vanilla Special
 # Edition Skyrim.esm / Dawnguard.esm / Dragonborn.esm all write 12, and so does every
-# navmesh-carrying plugin in the working D:\Mosais build (BSHeartland, LotD, Requiem ...).
+# navmesh-carrying plugin in the working F:\Mosais build (BSHeartland, LotD, Requiem ...).
 # A different value would be the only real reason to resave in the Creation Kit.
 SE_NVNM_VERSION = 12
 
